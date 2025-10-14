@@ -23,7 +23,7 @@ class FilmControllerTest {
         film = new Film();
         film.setName("Test Film");
         film.setDescription("Good movie");
-        film.setReleaseDate(LocalDate.of(2000, 1,1).atStartOfDay(ZoneOffset.UTC).toInstant());
+        film.setReleaseDate(LocalDate.of(2000, 1, 1).atStartOfDay(ZoneOffset.UTC).toInstant());
         film.setDuration(Duration.ofMinutes(120));
     }
 
@@ -32,11 +32,12 @@ class FilmControllerTest {
     void validFilmShouldPass() {
         assertDoesNotThrow(() -> callValidateFilm(film));
     }
+
     @Test
     @DisplayName("Пустое название вызывает ValidationException")
     void emptyNameShouldThrow() {
         film.setName("");
-        assertThrows(ValidationException.class, () ->callValidateFilm(film));
+        assertThrows(ValidationException.class, () -> callValidateFilm(film));
     }
 
     @Test
@@ -49,7 +50,7 @@ class FilmControllerTest {
     @Test
     @DisplayName("Дата релиза раньше 28.12.1895 вызывает ValidationException")
     void tooOldReleaseDateShouldThrow() {
-        film.setReleaseDate(LocalDate.of(1800, 1,1).atStartOfDay(ZoneOffset.UTC).toInstant());
+        film.setReleaseDate(LocalDate.of(1800, 1, 1).atStartOfDay(ZoneOffset.UTC).toInstant());
         assertThrows(ValidationException.class, () -> callValidateFilm(film));
     }
 

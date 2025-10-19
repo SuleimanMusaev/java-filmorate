@@ -1,23 +1,17 @@
 package ru.yandex.practicum.filmorate.model;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 
-/**
- * Film.
- */
 @Data
+@EqualsAndHashCode(of = {"id"})
 public class Film {
-    public static final Instant MIN_DATE = LocalDate.of(1895, 12, 28)
-            .atStartOfDay(ZoneOffset.UTC)
-            .toInstant();
-    Long id;
-    String name;
-    String description;
-    Instant releaseDate;
-    Duration duration;
+
+    private Long id;
+    private String name;
+    private String description;
+    private LocalDate releaseDate;
+    private int duration;
 }

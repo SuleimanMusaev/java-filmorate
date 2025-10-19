@@ -7,6 +7,7 @@ import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -16,6 +17,7 @@ import java.util.Map;
 public class FilmController {
     private static final Logger log = LoggerFactory.getLogger(FilmController.class);
     private static final int MAX_LENGTH_OF_DESCRIPTION = 200;
+    private static final LocalDate MIN_DATE = LocalDate.of(1895, 12, 28);
     private final Map<Long, Film> films = new HashMap<>();
 
     @GetMapping
@@ -65,6 +67,11 @@ public class FilmController {
         }
     }
 
+    /**
+     * Если использовать кастомный валидатор, то нужно пройтись по всем полям класса?
+     * И на каждое поле создать аннотацию? Не совсем понял этот момент, как использовать
+     * проверку каждого поля, как например тут для имени, описании и тд.
+     */
     private void validateFilm(Film film) {
         if (film.getName() == null || film.getName().isBlank()) {
             throw new ValidationException("Название не может быть пустым");
@@ -74,11 +81,11 @@ public class FilmController {
             throw new ValidationException("Максимальная длина описания — 200 символов");
         }
 
-        if (film.getReleaseDate() == null || film.getReleaseDate().isBefore(Film.MIN_DATE)) {
+        if (film.getReleaseDate() == null || film.getReleaseDate().isBefore(MIN_DATE)) {
             throw new ValidationException("Дата релиза — не раньше 28 декабря 1895 года");
         }
 
-        if (film.getDuration() == null || film.getDuration().isNegative()) {
+        if (film.getDuration() <= 0) {
             throw new ValidationException("продолжительность фильма должна быть положительным числом");
         }
     }

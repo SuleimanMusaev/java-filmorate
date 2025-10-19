@@ -7,9 +7,7 @@ import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 
 import java.lang.reflect.Method;
-import java.time.Duration;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -23,8 +21,8 @@ class FilmControllerTest {
         film = new Film();
         film.setName("Test Film");
         film.setDescription("Good movie");
-        film.setReleaseDate(LocalDate.of(2000, 1, 1).atStartOfDay(ZoneOffset.UTC).toInstant());
-        film.setDuration(Duration.ofMinutes(120));
+        film.setReleaseDate(LocalDate.of(2000, 1, 1));
+        film.setDuration(120);
     }
 
     @Test
@@ -50,14 +48,14 @@ class FilmControllerTest {
     @Test
     @DisplayName("Дата релиза раньше 28.12.1895 вызывает ValidationException")
     void tooOldReleaseDateShouldThrow() {
-        film.setReleaseDate(LocalDate.of(1800, 1, 1).atStartOfDay(ZoneOffset.UTC).toInstant());
+        film.setReleaseDate(LocalDate.of(1800, 1, 1));
         assertThrows(ValidationException.class, () -> callValidateFilm(film));
     }
 
     @Test
     @DisplayName("Отрицательная длительность вызывает ValidationException")
     void negativeDurationShouldThrow() {
-        film.setDuration(Duration.ofMinutes(-10));
+        film.setDuration(-10);
         assertThrows(ValidationException.class, () -> callValidateFilm(film));
     }
 

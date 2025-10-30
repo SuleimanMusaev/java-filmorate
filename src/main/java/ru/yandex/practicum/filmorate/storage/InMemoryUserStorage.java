@@ -15,7 +15,6 @@ import java.util.stream.Collectors;
 public class InMemoryUserStorage implements UserStorage {
     private static final Logger log = LoggerFactory.getLogger(InMemoryUserStorage.class);
     private final Map<Long, User> users = new HashMap<>();
-    private final Map<Long, Set<Long>> friends = new HashMap<>();
 
     @Override
     public Collection<User> getUsers() {
@@ -35,7 +34,7 @@ public class InMemoryUserStorage implements UserStorage {
             return user;
 
         } catch (ValidationException e) {
-            log.warn("Ошибка при создании пользователя '{}': {}", user.getName(), e.getMessage());
+            log.error("Ошибка при создании пользователя '{}': {}", user.getName(), e.getMessage());
             throw e;
         }
     }
@@ -59,7 +58,7 @@ public class InMemoryUserStorage implements UserStorage {
             log.info("Пользователь успешно обновлен: id={} имя='{}'", oldUser.getId(), oldUser.getName());
             return oldUser;
         } catch (ValidationException | NotFoundException e) {
-            log.warn("Ошибка при обновлении пользователя с именем={}: {}", newUser.getName(), e.getMessage());
+            log.error("Ошибка при обновлении пользователя с именем={}: {}", newUser.getName(), e.getMessage());
             throw e;
         }
     }
@@ -76,56 +75,65 @@ public class InMemoryUserStorage implements UserStorage {
             users.remove(user.getId());
             log.info("Пользователь успешно удален: id={}, name='{}'", user.getId(), user.getName());
         } catch (ValidationException | NotFoundException e) {
-            log.warn("Ошибка при удалении пользователя id={}: {}", user.getId(), e.getMessage());
+            log.error("Ошибка при удалении пользователя id={}: {}", user.getId(), e.getMessage());
             throw e;
         }
     }
 
+    @Override
     public void addFriend(Long userId, Long friendId) {
-        if (!users.containsKey(userId) || !users.containsKey(friendId)) {
+        User user = users.get(userId);
+        User friend = users.get(friendId);
+
+        if (user == null || friend == null) {
             throw new NotFoundException("Один из пользователей не найден");
         }
 
-        friends.computeIfAbsent(userId, k -> new HashSet<>()).add(friendId);
-        friends.computeIfAbsent(friendId, k -> new HashSet<>()).add(userId);
+        user.addFriend(friendId);
+        friend.addFriend(userId);
 
         log.info("Пользователи {} и {} теперь друзья", userId, friendId);
     }
 
+    @Override
     public void removeFriend(Long userId, Long friendId) {
-        if (!users.containsKey(userId) || !users.containsKey(friendId)) {
+        User user = users.get(userId);
+        User friend = users.get(friendId);
+        if (user == null || friend == null) {
             throw new NotFoundException("Один из пользователей не найден");
         }
-
-        friends.getOrDefault(userId, new HashSet<>()).remove(friendId);
-        friends.getOrDefault(friendId, new HashSet<>()).remove(userId);
+        user.removeFriend(friendId);
+        friend.removeFriend(userId);
 
         log.info("Пользователь {} удалил из друзей {}", userId, friendId);
     }
 
+    @Override
     public List<User> getFriends(Long userId) {
-        if (!users.containsKey(userId)) {
+        User user = users.get(userId);
+        if (user == null) {
             throw new NotFoundException("Пользователь не найден");
         }
 
-        Set<Long> friendsIds = friends.getOrDefault(userId, new HashSet<>());
-        return friendsIds.stream()
+        return user.getFriends().stream()
                 .map(users::get)
                 .collect(Collectors.toList());
     }
 
+    @Override
     public List<User> getCommonFriends(Long userId, Long otherId) {
-        if (!users.containsKey(userId) || !users.containsKey(otherId)) {
+        User user = users.get(userId);
+        User other = users.get(otherId);
+        if (user == null || other == null) {
             throw new NotFoundException("Пользователь не найден");
         }
 
-        Set<Long> userFriends = friends.getOrDefault(userId, new HashSet<>());
-        Set<Long> otherFriends = friends.getOrDefault(otherId, new HashSet<>());
+        Set<Long> userFriends = new HashSet<>(user.getFriends());
+        Set<Long> otherFriends = new HashSet<>(other.getFriends());
 
-        Set<Long> commonIds = new HashSet<>(userFriends);
-        commonIds.retainAll(otherFriends);
+        userFriends.retainAll(otherFriends);
 
-        return commonIds.stream()
+        return userFriends.stream()
                 .map(users::get)
                 .collect(Collectors.toList());
     }

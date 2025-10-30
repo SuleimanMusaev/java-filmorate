@@ -10,6 +10,7 @@ import ru.yandex.practicum.filmorate.model.Film;
 
 import java.time.LocalDate;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 public class InMemoryFilmStorage implements FilmStorage {
@@ -18,7 +19,6 @@ public class InMemoryFilmStorage implements FilmStorage {
 
     private static final Logger log = LoggerFactory.getLogger(InMemoryFilmStorage.class);
     private final Map<Long, Film> films = new HashMap<>();
-    private final Map<Long, Set<Long>> filmsLikes = new HashMap<>();
     private final InMemoryUserStorage userStorage;
 
     @Autowired
@@ -40,11 +40,10 @@ public class InMemoryFilmStorage implements FilmStorage {
 
             film.setId(getNextId());
             films.put(film.getId(), film);
-            filmsLikes.put(film.getId(), new HashSet<>()); //множество лайков
             log.info("Фильм успешно создан: id={}, name='{}'", film.getId(), film.getName());
             return film;
         } catch (ValidationException e) {
-            log.warn("Ошибка при создании фильма '{}': {}", film.getName(), e.getMessage());
+            log.error("Ошибка при создании фильма '{}': {}", film.getName(), e.getMessage());
             throw e;
         }
     }
@@ -61,7 +60,7 @@ public class InMemoryFilmStorage implements FilmStorage {
             films.remove(film.getId());
             log.info("Фильм успешно удален: id={}, name='{}'", film.getId(), film.getName());
         } catch (ValidationException | NotFoundException e) {
-            log.warn("Ошибка при удалении фильма id={}: {}", film.getId(), e.getMessage());
+            log.error("Ошибка при удалении фильма id={}: {}", film.getId(), e.getMessage());
             throw e;
         }
     }
@@ -85,58 +84,60 @@ public class InMemoryFilmStorage implements FilmStorage {
             log.info("Фильм успешно обновлён: id={}, name='{}'", oldFilm.getId(), oldFilm.getName());
             return oldFilm;
         } catch (ValidationException | NotFoundException e) {
-            log.warn("Ошибка при обновлении фильма id={}: {}", newFilm.getId(), e.getMessage());
+            log.error("Ошибка при обновлении фильма id={}: {}", newFilm.getId(), e.getMessage());
             throw e;
         }
     }
 
+    @Override
     public void addLike(Long filmId, Long userId) {
+        Film film = films.get(filmId);
         if (!films.containsKey(filmId)) {
             throw new NotFoundException("Фильм не найден");
         }
-        if (!userStorage.getUsers().stream().anyMatch(u -> u.getId().equals(userId))) {
+        if (userStorage.getUsers().stream().noneMatch(u -> u.getId().equals(userId))) {
             throw new NotFoundException("Пользователь не найден");
         }
-        filmsLikes.computeIfAbsent(filmId, id -> new HashSet<>()).add(userId);
-        log.info("Фильм '{}' получил лайк", filmId);
+        film.addLike(userId);
+        log.info("Фильм '{}' получил лайк от пользователя '{}'", filmId, userId);
     }
 
+    @Override
     public void removeLike(Long filmId, Long userId) {
-        if (!films.containsKey(filmId)) {
+        Film film = films.get(filmId);
+
+        if (film == null) {
             throw new NotFoundException("Фильм не найден");
         }
-        if (!userStorage.getUsers().stream().anyMatch(u -> u.getId().equals(userId))) {
-            throw new NotFoundException("Пользователь не найден");
-        }
-        Set<Long> likes = filmsLikes.get(filmId);
-        if (likes == null || !likes.remove(userId)) {
+        if (!film.getLikes().contains(userId)) {
             throw new NotFoundException("Лайк не найден");
         }
+        film.removeLike(userId);
 
         log.info("Пользователь '{}' удалил лайк к фильму '{}'", userId, filmId);
     }
 
+    @Override
     public int getLikesCount(Long filmId) {
-        if (!films.containsKey(filmId)) {
+        Film film = films.get(filmId);
+        if (film == null) {
             throw new NotFoundException("Фильм не найден");
         }
         log.info("Количество лайков у фильма id={}", filmId);
-        return filmsLikes.getOrDefault(filmId, Collections.emptySet()).size();
+        return film.getLikesCount();
     }
 
+    @Override
     public List<Film> getTopFilms(int count) {
         if (count <= 0) {
             log.warn("Некорректное значение count: {}", count);
             throw new ValidationException("Значение count должно быть больше 0");
         }
 
-        List<Film> allFilms = new ArrayList<>(films.values());
-        allFilms.sort((f1, f2) -> {
-            int like1 = filmsLikes.getOrDefault(f1.getId(), Set.of()).size();
-            int like2 = filmsLikes.getOrDefault(f2.getId(), Set.of()).size();
-            return Integer.compare(like2, like1);
-        });
-        return allFilms.subList(0, Math.min(count, allFilms.size()));
+        return films.values().stream()
+                .sorted((f1, f2) -> Integer.compare(f2.getLikesCount(), f1.getLikesCount()))
+                .limit(count)
+                .collect(Collectors.toList());
     }
 
     private void validateFilm(Film film) {

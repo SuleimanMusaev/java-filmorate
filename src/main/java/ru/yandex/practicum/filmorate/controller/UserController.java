@@ -1,64 +1,64 @@
 package ru.yandex.practicum.filmorate.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
+import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.dto.UserDto;
+import ru.yandex.practicum.filmorate.dto.mappers.UserMapper;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.UserService;
 
 import java.util.Collection;
-import java.util.List;
 
 @RestController
+@AllArgsConstructor
 @RequestMapping("/users")
 public class UserController {
     private final UserService userService;
-
-    @Autowired
-    public UserController(UserService userService) {
-        this.userService = userService;
-    }
+    private final UserMapper userMapper;
 
     @GetMapping
-    public Collection<User> getUsers() {
-        return userService.getUsers();
+    public Collection<User> getAllUsers() {
+        return userService.getAllUsers();
+    }
+
+    @GetMapping("/{id}")
+    public User getUserById(@PathVariable("id") long id) {
+        return userService.getUserById(id);
     }
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public User create(@RequestBody User user) {
-        return userService.create(user);
+    public User createUser(@RequestBody UserDto userDto) {
+        User user = UserMapper.mapToUser(userDto);
+        return userService.createUser(user);
     }
 
     @PutMapping
-    @ResponseStatus(HttpStatus.OK)
-    public User update(@RequestBody User newUser) {
-        return userService.update(newUser);
-    }
-
-    @DeleteMapping
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@RequestBody User user) {
-        userService.delete(user);
+    public User updateUser(@RequestBody UserDto userDto) {
+        User user = UserMapper.mapToUser(userDto);
+        return userService.updateUser(user);
     }
 
     @PutMapping("/{id}/friends/{friendId}")
-    public void addFriend(@PathVariable Long id, @PathVariable Long friendId) {
-        userService.addFriend(id, friendId);
+    public User putFriends(@PathVariable("id") long id, @PathVariable("friendId") long friendId) {
+        return userService.makeFriendship(id, friendId);
     }
 
     @DeleteMapping("/{id}/friends/{friendId}")
-    public void deleteFriend(@PathVariable Long id, @PathVariable Long friendId) {
-        userService.removeFriend(id, friendId);
+    public User deleteFriends(@PathVariable("id") long id, @PathVariable("friendId") long friendId) {
+        return userService.deleteFriendship(id, friendId);
     }
 
     @GetMapping("/{id}/friends")
-    public List<User> getFriends(@PathVariable Long id) {
-        return userService.getFriends(id);
+    public Collection<User> listFriends(@PathVariable("id") long id) {
+        if (userService.listOfFriends(id) == null) {
+            throw new NotFoundException("Такого юзера нет в списке!");
+        }
+        return userService.listOfFriends(id);
     }
 
     @GetMapping("/{id}/friends/common/{otherId}")
-    public List<User> getCommonFriends(@PathVariable Long id, @PathVariable Long otherId) {
-        return userService.getCommonFriends(id, otherId);
+    public Collection<User> commonFriends(@PathVariable("id") long id, @PathVariable("otherId") long otherId) {
+        return userService.listOfCommonFriends(id, otherId);
     }
 }

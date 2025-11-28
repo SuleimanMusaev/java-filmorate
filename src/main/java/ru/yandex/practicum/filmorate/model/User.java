@@ -11,10 +11,10 @@ import java.util.Set;
 @NoArgsConstructor
 @Builder
 public class User {
-    Long id;
-    String email;
-    String login;
-    String name;
-    LocalDate birthday;
-    Set<Long> friends = new HashSet<>();
+    private Long id;
+    private String email;
+    private String login;
+    private String name;
+    private LocalDate birthday;
+    private Set<Long> friends = new HashSet<>();
 }

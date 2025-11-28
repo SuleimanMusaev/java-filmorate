@@ -11,12 +11,12 @@ import java.util.Set;
 @NoArgsConstructor
 @Builder
 public class Film {
-    Long id;
-    String name;
-    String description;
-    LocalDate releaseDate;
-    int duration;
-    Set<Long> likes = new HashSet<>();
-    Set<Genre> genres = new HashSet<>();
-    Rating mpa;
+    private Long id;
+    private String name;
+    private String description;
+    private LocalDate releaseDate;
+    private int duration;
+    private Set<Long> likes = new HashSet<>();
+    private Set<Genre> genres = new HashSet<>();
+    private Rating mpa;
 }

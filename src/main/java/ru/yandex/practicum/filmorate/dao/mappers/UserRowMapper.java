@@ -1,28 +1,17 @@
 package ru.yandex.practicum.filmorate.dao.mappers;
 
 import lombok.AllArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.model.User;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.HashSet;
 
 @Component
 @AllArgsConstructor
 public class UserRowMapper implements RowMapper<User> {
-    private static final String NOT_CONFIRMED_FRIENDSHIP_QUERY =
-            "SELECT senderUser_id FROM friends WHERE receiverUser_id = ?";
-    private static final String CONFIRMED_FRIENDSHIP_QUERY =
-            "SELECT receiverUser_id FROM friends WHERE senderUser_id = ? AND status = 2";
-
-    private final JdbcTemplate jdbc;
-
     @Override
     public User mapRow(ResultSet resultSet, int rowNum) throws SQLException {
         User user = new User();
@@ -31,13 +20,7 @@ public class UserRowMapper implements RowMapper<User> {
         user.setLogin(resultSet.getString("login"));
         user.setName(resultSet.getString("name"));
         user.setBirthday(resultSet.getDate("birthday").toLocalDate());
-
-        List<Long> notConfirmedFriends = jdbc.queryForList(NOT_CONFIRMED_FRIENDSHIP_QUERY, Long.class, user.getId());
-        List<Long> confirmedFriends = jdbc.queryForList(CONFIRMED_FRIENDSHIP_QUERY, Long.class, user.getId());
-
-        Set<Long> allFriends = Stream.concat(notConfirmedFriends.stream(),
-                confirmedFriends.stream()).collect(Collectors.toSet());
-        user.setFriends(allFriends);
+        user.setFriends(new HashSet<>());
         return user;
     }
 }

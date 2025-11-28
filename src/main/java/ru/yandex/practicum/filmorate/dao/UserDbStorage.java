@@ -54,15 +54,32 @@ public class UserDbStorage implements UserStorage {
     @Override
     public User getUserById(Long id) {
         try {
-            return jdbcTemplate.queryForObject(GET_ID_QUERY, new UserRowMapper(jdbcTemplate), id);
+            User user = jdbcTemplate.queryForObject(GET_ID_QUERY, new UserRowMapper(), id);
+            if (user != null) {
+                // Добавляем друзей
+                List<Long> notConfirmedFriends = jdbcTemplate.queryForList(NOT_CONFIRMED_FRIENDSHIP_QUERY, Long.class, user.getId());
+                List<Long> confirmedFriends = jdbcTemplate.queryForList(CONFIRMED_FRIENDSHIP_QUERY, Long.class, user.getId());
+                Set<Long> allFriends = Stream.concat(notConfirmedFriends.stream(), confirmedFriends.stream())
+                        .collect(Collectors.toSet());
+                user.setFriends(allFriends);
+            }
+            return user;
         } catch (DataAccessException e) {
-            throw new NotFoundException("Такого юзера нет в списке!" + e.getMessage());
+            throw new NotFoundException("Такого юзера нет в списке! " + e.getMessage());
         }
     }
 
     @Override
     public Collection<User> getAllUsers() {
-        return jdbcTemplate.query(GET_ALL_QUERY, new UserRowMapper(jdbcTemplate));
+        List<User> users = jdbcTemplate.query(GET_ALL_QUERY, new UserRowMapper());
+        for (User user : users) {
+            List<Long> notConfirmedFriends = jdbcTemplate.queryForList(NOT_CONFIRMED_FRIENDSHIP_QUERY, Long.class, user.getId());
+            List<Long> confirmedFriends = jdbcTemplate.queryForList(CONFIRMED_FRIENDSHIP_QUERY, Long.class, user.getId());
+            Set<Long> allFriends = Stream.concat(notConfirmedFriends.stream(), confirmedFriends.stream())
+                    .collect(Collectors.toSet());
+            user.setFriends(allFriends);
+        }
+        return users;
     }
 
     @Override

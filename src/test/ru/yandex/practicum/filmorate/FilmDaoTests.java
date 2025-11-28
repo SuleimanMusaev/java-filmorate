@@ -30,7 +30,7 @@ public class FilmDaoTests {
 
     @BeforeEach
     void setUp() {
-        filmDbStorage =new FilmDbStorage(jdbc, userDbStorage);
+        filmDbStorage = new FilmDbStorage(jdbc, userDbStorage);
         film = new Film();
         film.setId(1L);
         film.setName("example");

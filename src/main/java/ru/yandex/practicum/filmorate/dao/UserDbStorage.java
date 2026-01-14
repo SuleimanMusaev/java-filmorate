@@ -171,4 +171,22 @@ public class UserDbStorage implements UserStorage {
         }
         return getUserById(id);
     }
+
+    @Override
+    public void deleteUser(Long userId) {
+        String sql = "DELETE FROM users WHERE user_id = ?";
+        int rowsDeleted = jdbcTemplate.update(sql, userId);
+
+        if (rowsDeleted == 0) {
+            throw new NotFoundException("Пользователь с ID " + userId + " не найден");
+        }
+    }
+
+    @Override
+    public void deleteFriendships(Long userId) {
+        String sql1 = "DELETE FROM friendships WHERE user_id = ?";
+        jdbcTemplate.update(sql1, userId);
+        String sql2 = "DELETE FROM friendships WHERE friend_id = ?";
+        jdbcTemplate.update(sql2, userId);
+    }
 }

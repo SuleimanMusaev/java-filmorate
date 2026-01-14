@@ -17,7 +17,7 @@ public interface UserStorage {
 
     User deleteFriendship(long id, long friendId);
 
-    public Collection<User> listOfFriends(long id);
+    Collection<User> listOfFriends(long id);
 
     Collection<User> listOfCommonFriends(Long id, Long otherId);
 

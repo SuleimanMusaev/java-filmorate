@@ -1,7 +1,6 @@
 package ru.yandex.practicum.filmorate.service;
 
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.dao.GenreDbStorage;
 import ru.yandex.practicum.filmorate.dao.RatingDbStorage;
@@ -34,11 +33,11 @@ public class FilmService {
     }
 
     public Film getFilmById(Long id) {
-        try {
-            return filmStorage.getFilmById(id);
-        } catch (EmptyResultDataAccessException e) {
+        Film film = filmStorage.getFilmById(id);
+        if (film == null) {
             throw new NotFoundException("Такого фильма нет в списке!");
         }
+        return film;
     }
 
     public Film userLikesFilm(Long id, Long userId) {
@@ -114,9 +113,6 @@ public class FilmService {
     }
 
     public void deleteUserLikes(Long userId) {
-        for (Film film : filmStorage.getAllFilms()) {
-            film.getLikes().remove(userId);
-        }
+        filmStorage.deleteUserLikes(userId);
     }
-
 }

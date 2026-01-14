@@ -60,55 +60,62 @@ public class InMemoryUserStorage implements UserStorage {
 
     @Override
     public User createFriendship(long id, long friendId) {
-        if (getUserById(id) == null) {
-            throw new NotFoundException("Такого юзера нет в списке!");
-        }
-        if (getUserById(friendId) == null) {
-            throw new NotFoundException("Невозможно добавить в друзья несуществующего юзера!");
-        }
-        if (!users.containsKey(id) || !users.containsKey(friendId)) {
+        User user1 = users.get(id);
+        User user2 = users.get(friendId);
+
+        if (user1 == null || user2 == null) {
             throw new NotFoundException("Один из пользователей не найден");
         }
-        getUserById(id).getFriends().add(friendId);
-        getUserById(friendId).getFriends().add(id);
-        return getUserById(id);
+
+        user1.getFriends().add(friendId);
+        user2.getFriends().add(id);
+        return user1;
     }
 
     @Override
     public User deleteFriendship(long id, long friendId) {
-        if (getUserById(id) == null) {
-            throw new NotFoundException("Такого юзера нет в списке!");
+        User user1 = users.get(id);
+        User user2 = users.get(friendId);
+
+        if (user1 == null || user2 == null) {
+            throw new NotFoundException("Один из пользователей не найден");
         }
-        if (getUserById(friendId) == null) {
-            throw new NotFoundException("Удаляемого из друзья юзера нет в списке!");
-        }
-        getUserById(id).getFriends().remove(friendId);
-        getUserById(friendId).getFriends().remove(id);
-        return getUserById(id);
+
+        user1.getFriends().remove(friendId);
+        user2.getFriends().remove(id);
+        return user1;
     }
 
     @Override
     public Collection<User> listOfFriends(long id) {
-        if (getUserById(id) == null) {
+        User user = users.get(id);
+        if (user == null) {
             throw new NotFoundException("Такого юзера нет в списке!");
         }
-        if (getUserById(id).getFriends() == null) {
+        if (user.getFriends() == null || user.getFriends().isEmpty()) {
             throw new NotFoundException("Список друзей пуст!");
         }
-        return getUserById(id).getFriends().stream()
-                .map(friends -> getUserById(friends))
+        return user.getFriends().stream()
+                .map(userId -> users.get(userId))
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 
     @Override
     public Collection<User> listOfCommonFriends(Long id, Long otherId) {
-        User u1 = getUserById(id);
-        User u2 = getUserById(otherId);
-        if (u1 == null || u2 == null) throw new NotFoundException("Одного из юзеров нет в списке!");
-        Set<Long> friends1 = new HashSet<>(u1.getFriends()); // копия
+        User u1 = users.get(id);      // Используем users.get()
+        User u2 = users.get(otherId);
+
+        if (u1 == null || u2 == null) {
+            throw new NotFoundException("Один из пользователей не найден");
+        }
+
+        Set<Long> friends1 = new HashSet<>(u1.getFriends());
         friends1.retainAll(u2.getFriends());
+
         return friends1.stream()
-                .map(this::getUserById)
+                .map(userId -> users.get(userId))
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 

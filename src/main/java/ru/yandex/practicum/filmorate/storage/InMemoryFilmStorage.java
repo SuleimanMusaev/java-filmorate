@@ -1,8 +1,8 @@
 package ru.yandex.practicum.filmorate.storage;
 
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
@@ -14,12 +14,15 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Component("inMemoryFilmStorage")
-@RequiredArgsConstructor
 public class InMemoryFilmStorage implements FilmStorage {
-    private static final Logger log = LoggerFactory.getLogger(InMemoryFilmStorage.class);
-    UserStorage userStorage;
-
+    private final UserStorage userStorage;
     private final Map<Long, Film> films = new HashMap<>();
+
+    public InMemoryFilmStorage(@Qualifier("userInMemoryStorage") UserStorage userStorage) {
+        this.userStorage = userStorage;
+    }
+
+    private static final Logger log = LoggerFactory.getLogger(InMemoryFilmStorage.class);
 
     @Override
     public Film getFilmById(Long id) {

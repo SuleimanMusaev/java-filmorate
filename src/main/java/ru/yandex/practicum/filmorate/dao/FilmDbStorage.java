@@ -186,4 +186,31 @@ public class FilmDbStorage implements FilmStorage {
                 filmId
         ));
     }
+    @Override
+    public void deleteUserLikes(Long userId) {
+        String sql = "DELETE FROM film_likes WHERE user_id = ?";
+        jdbcTemplate.update(sql, userId);
+    }
+
+    @Override
+    public void deleteFilm(Long filmId) {
+        // Удаляем фильм из базы данных
+        String sql = "DELETE FROM films WHERE film_id = ?";
+        int rowsDeleted = jdbcTemplate.update(sql, filmId);
+
+        if (rowsDeleted == 0) {
+            throw new NotFoundException("Фильм с ID " + filmId + " не найден");
+        }
+    }
+    @Override
+    public void deleteFilmLikes(Long filmId) {
+        String sql = "DELETE FROM film_likes WHERE film_id = ?";
+        jdbcTemplate.update(sql, filmId);
+    }
+
+    @Override
+    public void deleteFilmGenres(Long filmId) {
+        String sql = "DELETE FROM film_genres WHERE film_id = ?";
+        jdbcTemplate.update(sql, filmId);
+    }
 }

@@ -26,7 +26,7 @@ public class FilmService {
     public FilmService(@Qualifier("filmDbStorage") FilmStorage filmStorage,
                        @Qualifier("userDbStorage") UserStorage userStorage,
                        @Qualifier("ratingDbStorage") RatingDbStorage ratingDbStorage,
-                       @Qualifier("genreDbStorage")GenreDbStorage genreDbStorage) {
+                       @Qualifier("genreDbStorage") GenreDbStorage genreDbStorage) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
         this.ratingDbStorage = ratingDbStorage;
@@ -42,6 +42,8 @@ public class FilmService {
     }
 
     public Film userLikesFilm(Long id, Long userId) {
+        Film film = getFilmById(id);//Проверка на существование фильма
+        userStorage.getUserById(userId);//Проверка на существование юзера
         return filmStorage.userLikesFilm(id, userId);
     }
 
@@ -103,4 +105,18 @@ public class FilmService {
             throw new ValidationException("MPA is missing");
         }
     }
+
+    public void deleteFilm(Long filmId) {
+        getFilmById(filmId);
+        filmStorage.deleteFilmLikes(filmId);
+        filmStorage.deleteFilmGenres(filmId);
+        filmStorage.deleteFilm(filmId);
+    }
+
+    public void deleteUserLikes(Long userId) {
+        for (Film film : filmStorage.getAllFilms()) {
+            film.getLikes().remove(userId);
+        }
+    }
+
 }

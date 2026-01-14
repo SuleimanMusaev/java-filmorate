@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -65,6 +66,9 @@ public class InMemoryUserStorage implements UserStorage {
         if (getUserById(friendId) == null) {
             throw new NotFoundException("Невозможно добавить в друзья несуществующего юзера!");
         }
+        if (!users.containsKey(id) || !users.containsKey(friendId)) {
+            throw new NotFoundException("Один из пользователей не найден");
+        }
         getUserById(id).getFriends().add(friendId);
         getUserById(friendId).getFriends().add(id);
         return getUserById(id);
@@ -115,5 +119,20 @@ public class InMemoryUserStorage implements UserStorage {
                 .max()
                 .orElse(0);
         return ++currentMaxId;
+    }
+
+    @Override
+    public void deleteUser(Long userId) {
+        if (!users.containsKey(userId)) {
+            throw new NotFoundException("Пользователь с ID " + userId + " не найден");
+        }
+        users.remove(userId);
+    }
+
+    @Override
+    public void deleteFriendships(Long userId) {
+        for (User user : users.values()) {
+            user.getFriends().remove(userId);
+        }
     }
 }

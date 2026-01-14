@@ -9,7 +9,9 @@ import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 
 import java.time.LocalDate;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component("inMemoryFilmStorage")
 @RequiredArgsConstructor
@@ -87,5 +89,36 @@ public class InMemoryFilmStorage implements FilmStorage {
                 .max()
                 .orElse(0);
         return ++currentMaxId;
+    }
+
+    @Override
+    public void deleteFilm(Long filmId) {
+        if (!films.containsKey(filmId)) {
+            throw new NotFoundException("Фильм с ID " + filmId + " не найден");
+        }
+        films.remove(filmId);
+    }
+
+    @Override
+    public void deleteFilmLikes(Long filmId) {
+        Film film = films.get(filmId);
+        if (film != null) {
+            film.getLikes().clear();
+        }
+    }
+
+    @Override
+    public void deleteFilmGenres(Long filmId) {
+        Film film = films.get(filmId);
+        if (film != null) {
+            film.getGenres().clear();
+        }
+    }
+
+    @Override
+    public void deleteUserLikes(Long userId) {
+        for (Film film : films.values()) {
+            film.getLikes().remove(userId);
+        }
     }
 }

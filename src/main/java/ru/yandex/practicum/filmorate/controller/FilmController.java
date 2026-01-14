@@ -51,4 +51,9 @@ public class FilmController {
     public Collection<Film> listFirstCountFilm(@RequestParam(defaultValue = "10") int count) {
         return filmService.listFirstCountFilm(count);
     }
+
+    @DeleteMapping("/{filmId}")
+    public void deleteFilm(@PathVariable Long filmId) {
+        filmService.deleteFilm(filmId);
+    }
 }

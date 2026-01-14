@@ -16,4 +16,12 @@ public interface FilmStorage {
     public Film userLikesFilm(Long id, Long userId);
 
     public Film deleteLikesFilm(Long id, Long userId);
+
+    void deleteFilm(Long filmId);
+
+    void deleteFilmLikes(Long filmId);
+
+    void deleteFilmGenres(Long filmId);
+
+    void deleteUserLikes(Long userId);
 }

@@ -109,8 +109,4 @@ public class FilmService {
         getFilmById(filmId);
         filmStorage.deleteFilm(filmId);
     }
-
-    public void deleteUserLikes(Long userId) {
-        filmStorage.deleteUserLikes(userId);
-    }
 }

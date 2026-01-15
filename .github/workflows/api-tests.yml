@@ -1,7 +1,8 @@
 name: Films API Tests
 
 on:
-  pull_request:
+  pull_request_target:  # Вместо pull_request - разрешает PR из форков
+    branches: [ develop ]
 
 jobs:
   build:

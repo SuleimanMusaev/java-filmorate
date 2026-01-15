@@ -186,6 +186,7 @@ public class FilmDbStorage implements FilmStorage {
                 filmId
         ));
     }
+
     @Override
     public void deleteUserLikes(Long userId) {
         String sql = "DELETE FROM films_likes WHERE users_id = ?";
@@ -194,13 +195,18 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public void deleteFilm(Long filmId) {
-        String sql = "DELETE FROM films WHERE id = ?";
-        int rowsDeleted = jdbcTemplate.update(sql, filmId);
+        deleteFilmLikes(filmId);
+        deleteFilmGenres(filmId);
+        String deleteRatingSql = "DELETE FROM films_rating WHERE films_id = ?";
+        jdbcTemplate.update(deleteRatingSql, filmId);
+        String deleteFilmSql = "DELETE FROM films WHERE id = ?";
+        int rowsDeleted = jdbcTemplate.update(deleteFilmSql, filmId);
 
         if (rowsDeleted == 0) {
             throw new NotFoundException("Фильм с ID " + filmId + " не найден");
         }
     }
+
     @Override
     public void deleteFilmLikes(Long filmId) {
         String sql = "DELETE FROM films_likes WHERE films_id = ?";

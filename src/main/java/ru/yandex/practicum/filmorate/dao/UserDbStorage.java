@@ -174,7 +174,8 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public void deleteUser(Long userId) {
-        String sql = "DELETE FROM users WHERE user_id = ?";
+        deleteFriendships(userId);
+        String sql = "DELETE FROM users WHERE id = ?";
         int rowsDeleted = jdbcTemplate.update(sql, userId);
 
         if (rowsDeleted == 0) {
@@ -184,9 +185,7 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public void deleteFriendships(Long userId) {
-        String sql1 = "DELETE FROM friendships WHERE user_id = ?";
-        jdbcTemplate.update(sql1, userId);
-        String sql2 = "DELETE FROM friendships WHERE friend_id = ?";
-        jdbcTemplate.update(sql2, userId);
+        String sql = "DELETE FROM friends WHERE senderUser_id = ? OR receiverUser_id = ?";
+        jdbcTemplate.update(sql, userId, userId);
     }
 }

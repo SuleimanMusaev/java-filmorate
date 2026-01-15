@@ -95,4 +95,9 @@ public class UserService {
             throw new ValidationException("Birthday cannot be in the future");
         }
     }
+
+    public User findById(Long id) {
+        return userStorage.findById(id)
+                .orElseThrow(() -> new NotFoundException("Пользователь с id=" + id + " не найден"));
+    }
 }

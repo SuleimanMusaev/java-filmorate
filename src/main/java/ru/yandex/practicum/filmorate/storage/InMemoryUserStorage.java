@@ -101,7 +101,7 @@ public class InMemoryUserStorage implements UserStorage {
         User u1 = getUserById(id);
         User u2 = getUserById(otherId);
         if (u1 == null || u2 == null) throw new NotFoundException("Одного из юзеров нет в списке!");
-        Set<Long> friends1 = new HashSet<>(u1.getFriends()); // копия
+        Set<Long> friends1 = new HashSet<>(u1.getFriends());
         friends1.retainAll(u2.getFriends());
         return friends1.stream()
                 .map(this::getUserById)
@@ -115,5 +115,10 @@ public class InMemoryUserStorage implements UserStorage {
                 .max()
                 .orElse(0);
         return ++currentMaxId;
+    }
+
+    @Override
+    public Optional<User> findById(Long id) {
+        return Optional.ofNullable(users.get(id));
     }
 }

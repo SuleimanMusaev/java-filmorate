@@ -43,7 +43,6 @@ public class InMemoryFilmStorage implements FilmStorage {
 
     @Override
     public Film updateFilm(Film film) {
-        // validateFilm(film);
         if (film.getId() == null) {
             throw new ValidationException("Id должен быть указан!");
         }
@@ -87,5 +86,10 @@ public class InMemoryFilmStorage implements FilmStorage {
                 .max()
                 .orElse(0);
         return ++currentMaxId;
+    }
+
+    @Override
+    public Optional<Film> findById(Long id) {
+        return Optional.ofNullable(films.get(id));
     }
 }

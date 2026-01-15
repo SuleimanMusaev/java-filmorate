@@ -27,7 +27,7 @@ public class FilmRowMapper implements RowMapper<Film> {
 
         Long ratingId = rs.getLong("rating_id");
         String ratingName = rs.getString("rating_name");
-        if (ratingId != 0) { // 0 = нет значения
+        if (ratingId != 0) {
             Rating rating = new Rating(ratingId, ratingName);
             film.setMpa(rating);
         }

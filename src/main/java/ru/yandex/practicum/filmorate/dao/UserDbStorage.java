@@ -16,10 +16,7 @@ import ru.yandex.practicum.filmorate.storage.UserStorage;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -170,5 +167,24 @@ public class UserDbStorage implements UserStorage {
             jdbcTemplate.update(DELETE_FRIENDSHIP_QUERY, id, friendId, id, friendId);
         }
         return getUserById(id);
+    }
+
+    @Override
+    public Optional<User> findById(Long id) {
+        List<User> users = jdbcTemplate.query(GET_ID_QUERY, new UserRowMapper(), id);
+
+        if (users.isEmpty()) {
+            return Optional.empty();
+        }
+
+        User user = users.get(0);
+        List<Long> notConfirmedFriends = jdbcTemplate.queryForList(NOT_CONFIRMED_FRIENDSHIP_QUERY, Long.class, user.getId());
+        List<Long> confirmedFriends = jdbcTemplate.queryForList(CONFIRMED_FRIENDSHIP_QUERY, Long.class, user.getId());
+
+        Set<Long> allFriends = Stream.concat(notConfirmedFriends.stream(), confirmedFriends.stream())
+                .collect(Collectors.toSet());
+        user.setFriends(allFriends);
+
+        return Optional.of(user);
     }
 }

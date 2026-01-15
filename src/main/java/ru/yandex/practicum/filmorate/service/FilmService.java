@@ -103,4 +103,9 @@ public class FilmService {
             throw new ValidationException("MPA is missing");
         }
     }
+
+    public Film findById(Long id) {
+        return filmStorage.findById(id)
+                .orElseThrow(() -> new NotFoundException("Фильм с id=" + id + " не найден"));
+    }
 }

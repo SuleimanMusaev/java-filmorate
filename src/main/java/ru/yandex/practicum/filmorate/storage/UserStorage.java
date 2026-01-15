@@ -1,8 +1,8 @@
 package ru.yandex.practicum.filmorate.storage;
 
 import ru.yandex.practicum.filmorate.model.User;
-
 import java.util.Collection;
+import java.util.Optional;
 
 public interface UserStorage {
     User getUserById(Long id);
@@ -17,7 +17,9 @@ public interface UserStorage {
 
     User deleteFriendship(long id, long friendId);
 
-    public Collection<User> listOfFriends(long id);
+    Collection<User> listOfFriends(long id);
 
     Collection<User> listOfCommonFriends(Long id, Long otherId);
+
+    Optional<User> findById(Long id);
 }

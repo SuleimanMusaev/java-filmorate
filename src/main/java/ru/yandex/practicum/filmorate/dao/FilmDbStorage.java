@@ -186,4 +186,19 @@ public class FilmDbStorage implements FilmStorage {
                 filmId
         ));
     }
+
+    @Override
+    public Optional<Film> findById(Long id) {
+        List<Film> films = jdbcTemplate.query(GET_ID_QUERY, new FilmRowMapper(), id);
+
+        if (films.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Film film = films.get(0);
+        film.setGenres(loadGenres(id));
+        film.setLikes(loadLikes(id));
+
+        return Optional.of(film);
+    }
 }

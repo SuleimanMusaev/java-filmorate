@@ -6,7 +6,6 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.dao.mappers.UserRowMapper;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
@@ -25,7 +24,6 @@ import java.util.stream.Stream;
 
 @RequiredArgsConstructor
 @Repository
-@Component("userDbStorage")
 @Qualifier("userDbStorage")
 public class UserDbStorage implements UserStorage {
     private final JdbcTemplate jdbcTemplate;
@@ -174,18 +172,11 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public void deleteUser(Long userId) {
-        deleteFriendships(userId);
         String sql = "DELETE FROM users WHERE id = ?";
         int rowsDeleted = jdbcTemplate.update(sql, userId);
 
         if (rowsDeleted == 0) {
             throw new NotFoundException("Пользователь с ID " + userId + " не найден");
         }
-    }
-
-    @Override
-    public void deleteFriendships(Long userId) {
-        String sql = "DELETE FROM friends WHERE senderUser_id = ? OR receiverUser_id = ?";
-        jdbcTemplate.update(sql, userId, userId);
     }
 }

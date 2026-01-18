@@ -84,8 +84,6 @@ public class UserService {
 
     public void deleteUser(Long userId) {
         getUserById(userId);
-        filmStorage.deleteUserLikes(userId);
-        userStorage.deleteFriendships(userId);
         userStorage.deleteUser(userId);
     }
 }

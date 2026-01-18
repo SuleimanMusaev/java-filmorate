@@ -32,7 +32,6 @@ public class ReviewDbStorage implements ReviewStorage {
             ps.setLong(4, review.getFilmId());
             return ps;
         }, keyHolder);
-
         review.setReviewId(keyHolder.getKey().longValue());
         return review;
     }
@@ -69,23 +68,35 @@ public class ReviewDbStorage implements ReviewStorage {
 
     @Override
     public void addLike(Long reviewId, Long userId) {
+        // Сначала удаляем старую реакцию (если была), чтобы избежать ошибок дублирования
+        deleteLikeOrDislike(reviewId, userId);
+
+        // Теперь безопасно добавляем лайк
         jdbcTemplate.update("INSERT INTO review_likes (review_id, user_id, is_like) VALUES (?, ?, true)", reviewId, userId);
         updateUseful(reviewId, 1);
     }
 
     @Override
     public void addDislike(Long reviewId, Long userId) {
+        // Сначала удаляем старую реакцию
+        deleteLikeOrDislike(reviewId, userId);
+
+        // Безопасно добавляем дизлайк
         jdbcTemplate.update("INSERT INTO review_likes (review_id, user_id, is_like) VALUES (?, ?, false)", reviewId, userId);
         updateUseful(reviewId, -1);
     }
 
     @Override
     public void deleteLikeOrDislike(Long reviewId, Long userId) {
+        // Проверяем, была ли оценка, и корректируем рейтинг перед удалением
         jdbcTemplate.query("SELECT is_like FROM review_likes WHERE review_id = ? AND user_id = ?",
                 (rs) -> {
+                    // Если был лайк (true), то при удалении рейтинг уменьшаем (-1).
+                    // Если был дизлайк (false), то при удалении рейтинг увеличиваем (+1).
                     int delta = rs.getBoolean("is_like") ? -1 : 1;
                     updateUseful(reviewId, delta);
                 }, reviewId, userId);
+
         jdbcTemplate.update("DELETE FROM review_likes WHERE review_id = ? AND user_id = ?", reviewId, userId);
     }
 

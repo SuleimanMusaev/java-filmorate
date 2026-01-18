@@ -26,6 +26,6 @@ public class Review {
     @NotNull(message = "ID фильма обязателен")
     private Long filmId;
 
-    @Builder.Default // без этого возникает ошибка при создании сеттеров
+    @Builder.Default
     private int useful = 0;
 }

@@ -31,29 +31,30 @@ public class FilmDbStorage implements FilmStorage {
     private final UserDbStorage userDbStorage;
 
     private static final String CREATE_QUERY =
-            "INSERT INTO films (name,description,releaseDate,duration) VALUES (?,?,?,?)";
-    private static final String UPDATE_QUERY =
-            "UPDATE films SET name = ?, description = ?, releaseDate = ?, duration = ? WHERE id = ?";
-    private static final String GET_ID_QUERY =
-            "SELECT f.*, r.id AS rating_id, r.name AS rating_name " +
-                    "FROM films f " +
-                    "LEFT JOIN films_rating fr ON f.id = fr.films_id " +
-                    "LEFT JOIN rating r ON r.id = fr.rating_id " +
-                    "WHERE f.id = ?";
-    private static final String GET_ALL_QUERY =
-            "SELECT f.*, r.id AS rating_id, r.name AS rating_name " +
-                    "FROM films f " +
-                    "LEFT JOIN films_rating fr ON f.id = fr.films_id " +
-                    "LEFT JOIN rating r ON r.id = fr.rating_id";
-    private static final String INSERT_FILM_RATINGS_BY_ID_QUERY =
-            "INSERT INTO films_rating (films_id, rating_id) VALUES (?, ?)";
-    private static final String INSERT_FILM_GENRES_QUERY =
-            "INSERT INTO films_genre (films_id, genre_id) VALUES (?, ?)";
-    private static final String INSERT_FILM_LIKES_QUERY =
-            "INSERT INTO films_likes (films_id, users_id) VALUES (?, ?)";
-    private static final String DELETE_FILM_LIKES_BY_ID_QUERY =
-            "DELETE FROM films_likes WHERE films_id=? AND users_id=?";
+            "INSERT INTO films (name, description, release_date, duration, rating_id) VALUES (?,?,?,?,?)";
 
+    private static final String UPDATE_QUERY =
+            "UPDATE films SET name = ?, description = ?, release_date = ?, duration = ?, rating_id = ? WHERE id = ?";
+
+    private static final String GET_ID_QUERY =
+            "SELECT f.*, r.name AS rating_name " +
+                    "FROM films f " +
+                    "LEFT JOIN rating r ON f.rating_id = r.id " +
+                    "WHERE f.id = ?";
+
+    private static final String GET_ALL_QUERY =
+            "SELECT f.*, r.name AS rating_name " +
+                    "FROM films f " +
+                    "LEFT JOIN rating r ON f.rating_id = r.id";
+
+    private static final String INSERT_FILM_GENRES_QUERY =
+            "INSERT INTO films_genre (film_id, genre_id) VALUES (?, ?)";
+
+    private static final String INSERT_FILM_LIKES_QUERY =
+            "INSERT INTO films_likes (film_id, user_id) VALUES (?, ?)";
+
+    private static final String DELETE_FILM_LIKES_BY_ID_QUERY =
+            "DELETE FROM films_likes WHERE film_id=? AND user_id=?";
 
     @Override
     public Film getFilmById(Long id) {
@@ -61,7 +62,7 @@ public class FilmDbStorage implements FilmStorage {
         try {
             film = jdbcTemplate.queryForObject(GET_ID_QUERY, new FilmRowMapper(), id);
         } catch (DataAccessException e) {
-            throw new DatabaseException("Такого фильма не существует! " + e.getMessage());
+            throw new NotFoundException("Такого фильма не существует! " + e.getMessage());
         }
 
         film.setGenres(loadGenres(id));
@@ -73,12 +74,10 @@ public class FilmDbStorage implements FilmStorage {
     @Override
     public Collection<Film> getAllFilms() {
         List<Film> films = jdbcTemplate.query(GET_ALL_QUERY, new FilmRowMapper());
-
         for (Film f : films) {
             f.setGenres(loadGenres(f.getId()));
             f.setLikes(loadLikes(f.getId()));
         }
-
         return films;
     }
 
@@ -95,13 +94,19 @@ public class FilmDbStorage implements FilmStorage {
             stmt.setString(2, film.getDescription());
             stmt.setDate(3, Date.valueOf(film.getReleaseDate()));
             stmt.setInt(4, film.getDuration());
+            if (film.getMpa() != null) {
+                stmt.setLong(5, film.getMpa().getId());
+            } else {
+                stmt.setObject(5, null);
+            }
             return stmt;
         }, keyHolder);
 
         film.setId(Objects.requireNonNull(keyHolder.getKey()).longValue());
 
         if (film.getGenres() != null && !film.getGenres().isEmpty()) {
-            List<Object[]> batch = film.getGenres().stream()
+            Set<Genre> uniqueGenres = new LinkedHashSet<>(film.getGenres());
+            List<Object[]> batch = uniqueGenres.stream()
                     .map(g -> {
                         if (g.getId() == null) {
                             throw new ValidationException("У жанра должен быть id.");
@@ -114,18 +119,9 @@ public class FilmDbStorage implements FilmStorage {
             } catch (DataAccessException e) {
                 throw new DatabaseException("Ошибка при сохранении жанров: " + e.getMessage());
             }
+            film.setGenres(uniqueGenres);
         }
 
-        if (film.getMpa() != null) {
-            if (film.getMpa().getId() == null) {
-                throw new ValidationException("У рейтинга должен быть id.");
-            }
-            try {
-                jdbcTemplate.update(INSERT_FILM_RATINGS_BY_ID_QUERY, film.getId(), film.getMpa().getId());
-            } catch (DataAccessException e) {
-                throw new DatabaseException("Такого рейтинга не существует! " + e.getMessage());
-            }
-        }
         return getFilmById(film.getId());
     }
 
@@ -134,18 +130,34 @@ public class FilmDbStorage implements FilmStorage {
         try {
             jdbcTemplate.queryForObject(GET_ID_QUERY, new FilmRowMapper(), film.getId());
         } catch (DataAccessException e) {
-            throw new NotFoundException("Такого фильма нет в списке!  " + e.getMessage());
+            throw new NotFoundException("Такого фильма нет в списке! " + e.getMessage());
         }
+
+        jdbcTemplate.update("DELETE FROM films_genre WHERE film_id = ?", film.getId());
+        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
+            Set<Genre> uniqueGenres = new LinkedHashSet<>(film.getGenres());
+            List<Object[]> batch = uniqueGenres.stream()
+                    .map(g -> new Object[]{film.getId(), g.getId()})
+                    .toList();
+            jdbcTemplate.batchUpdate(INSERT_FILM_GENRES_QUERY, batch);
+        }
+
         jdbcTemplate.update(connection -> {
             PreparedStatement stmt = connection.prepareStatement(UPDATE_QUERY);
             stmt.setString(1, film.getName());
             stmt.setString(2, film.getDescription());
             stmt.setDate(3, Date.valueOf(film.getReleaseDate()));
             stmt.setInt(4, film.getDuration());
-            stmt.setLong(5, film.getId());
+            if (film.getMpa() != null) {
+                stmt.setLong(5, film.getMpa().getId());
+            } else {
+                stmt.setObject(5, null);
+            }
+            stmt.setLong(6, film.getId());
             return stmt;
         });
-        return film;
+
+        return getFilmById(film.getId());
     }
 
     @Override
@@ -169,19 +181,16 @@ public class FilmDbStorage implements FilmStorage {
     }
 
     private Set<Genre> loadGenres(Long filmId) {
-        List<Genre> genres = jdbcTemplate.query(
-                "SELECT g.id, g.name FROM genre g " +
-                        "JOIN films_genre fg ON g.id = fg.genre_id WHERE fg.films_id = ?",
-                new GenreRowMapper(),
-                filmId
-        );
+        String sql = "SELECT g.id, g.name FROM genre g " +
+                "JOIN films_genre fg ON g.id = fg.genre_id WHERE fg.film_id = ?";
+        List<Genre> genres = jdbcTemplate.query(sql, new GenreRowMapper(), filmId);
         genres.sort(Comparator.comparing(Genre::getId));
         return new LinkedHashSet<>(genres);
     }
 
     private Set<Long> loadLikes(Long filmId) {
         return new HashSet<>(jdbcTemplate.queryForList(
-                "SELECT users_id FROM films_likes WHERE films_id = ?",
+                "SELECT user_id FROM films_likes WHERE film_id = ?",
                 Long.class,
                 filmId
         ));
@@ -190,15 +199,12 @@ public class FilmDbStorage implements FilmStorage {
     @Override
     public Optional<Film> findById(Long id) {
         List<Film> films = jdbcTemplate.query(GET_ID_QUERY, new FilmRowMapper(), id);
-
         if (films.isEmpty()) {
             return Optional.empty();
         }
-
         Film film = films.get(0);
         film.setGenres(loadGenres(id));
         film.setLikes(loadLikes(id));
-
         return Optional.of(film);
     }
 }

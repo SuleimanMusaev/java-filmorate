@@ -43,7 +43,6 @@ public class InMemoryFilmStorage implements FilmStorage {
 
     @Override
     public Film updateFilm(Film film) {
-        // validateFilm(film);
         if (film.getId() == null) {
             throw new ValidationException("Id должен быть указан!");
         }
@@ -78,6 +77,56 @@ public class InMemoryFilmStorage implements FilmStorage {
         }
         film.getLikes().remove(userId);
         return film;
+    }
+
+    @Override
+    public Collection<Film> getCommonFilms(Long userId, Long friendId) {
+        List<Film> result = films.values().stream()
+                .filter(f -> f.getLikes().contains(userId) && f.getLikes().contains(friendId))
+                .sorted((a, b) -> Integer.compare(b.getLikes().size(), a.getLikes().size()))
+                .toList();
+        return result;
+    }
+
+    @Override
+    public Collection<Film> getRecommendations(Long userId) {
+        Set<Long> userLikes = films.values().stream()
+                .filter(f -> f.getLikes().contains(userId))
+                .map(Film::getId)
+                .collect(java.util.stream.Collectors.toSet());
+
+        if (userLikes.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, Integer> commonCounts = new HashMap<>();
+        for (Film film : films.values()) {
+            if (!userLikes.contains(film.getId())) {
+                continue;
+            }
+            for (Long liker : film.getLikes()) {
+                if (liker.equals(userId)) {
+                    continue;
+                }
+                commonCounts.merge(liker, 1, Integer::sum);
+            }
+        }
+
+        Optional<Map.Entry<Long, Integer>> best = commonCounts.entrySet().stream()
+                .max(Map.Entry.comparingByValue());
+
+        if (best.isEmpty()) {
+            return List.of();
+        }
+
+        Long similarUserId = best.get().getKey();
+
+        List<Film> result = films.values().stream()
+                .filter(f -> f.getLikes().contains(similarUserId) && !f.getLikes().contains(userId))
+                .sorted((a, b) -> Integer.compare(b.getLikes().size(), a.getLikes().size()))
+                .toList();
+
+        return result;
     }
 
     private Long getNextId() {

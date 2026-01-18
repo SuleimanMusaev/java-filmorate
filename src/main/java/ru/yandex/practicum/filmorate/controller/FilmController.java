@@ -51,4 +51,9 @@ public class FilmController {
     public Collection<Film> listFirstCountFilm(@RequestParam(defaultValue = "10") int count) {
         return filmService.listFirstCountFilm(count);
     }
+
+    @GetMapping("/common")
+    public Collection<Film> getCommonFilms(@RequestParam Long userId, @RequestParam Long friendId) {
+        return filmService.getCommonFilms(userId, friendId);
+    }
 }

@@ -135,11 +135,4 @@ public class InMemoryUserStorage implements UserStorage {
         }
         users.remove(userId);
     }
-
-    @Override
-    public void deleteFriendships(Long userId) {
-        for (User user : users.values()) {
-            user.getFriends().remove(userId);
-        }
-    }
 }

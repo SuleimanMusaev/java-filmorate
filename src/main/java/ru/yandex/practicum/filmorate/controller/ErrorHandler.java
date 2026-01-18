@@ -13,18 +13,18 @@ public class ErrorHandler {
     @ExceptionHandler
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse validationException(final ValidationException e) {
-        return new ErrorResponse("error" + e.getMessage());
+        return new ErrorResponse("error " + e.getMessage());
     }
 
     @ExceptionHandler
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ErrorResponse notFoundException(final NotFoundException e) {
-        return new ErrorResponse("error" + e.getMessage());
+        return new ErrorResponse("error " + e.getMessage());
     }
 
     @ExceptionHandler
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse databaseException(final DatabaseException e) {
-        return new ErrorResponse("error" + e.getMessage());
+        return new ErrorResponse("error " + e.getMessage());
     }
 }

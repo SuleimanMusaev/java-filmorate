@@ -18,6 +18,7 @@ import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 
+
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
@@ -54,6 +55,38 @@ public class FilmDbStorage implements FilmStorage {
             "INSERT INTO films_likes (films_id, users_id) VALUES (?, ?)";
     private static final String DELETE_FILM_LIKES_BY_ID_QUERY =
             "DELETE FROM films_likes WHERE films_id=? AND users_id=?";
+
+    private static final String COMMON_FILMS_QUERY =
+            "SELECT f.*, r.id AS rating_id, r.name AS rating_name, COUNT(fl_all.users_id) AS like_count " +
+                    "FROM films f " +
+                    "JOIN films_likes fl_user ON f.id = fl_user.films_id AND fl_user.users_id = ? " +
+                    "JOIN films_likes fl_friend ON f.id = fl_friend.films_id AND fl_friend.users_id = ? " +
+                    "LEFT JOIN films_rating fr ON f.id = fr.films_id " +
+                    "LEFT JOIN rating r ON r.id = fr.rating_id " +
+                    "LEFT JOIN films_likes fl_all ON f.id = fl_all.films_id " +
+                    "GROUP BY f.id, f.name, f.description, f.releaseDate, f.duration, r.id, r.name " +
+                    "ORDER BY like_count DESC";
+
+    private static final String MOST_SIMILAR_USER_QUERY =
+            "SELECT fl_other.users_id AS other_id, COUNT(*) AS common_count " +
+                    "FROM films_likes fl_user " +
+                    "JOIN films_likes fl_other ON fl_user.films_id = fl_other.films_id " +
+                    "WHERE fl_user.users_id = ? AND fl_other.users_id <> ? " +
+                    "GROUP BY fl_other.users_id " +
+                    "ORDER BY common_count DESC " +
+                    "LIMIT 1";
+
+    private static final String RECOMMENDATIONS_QUERY =
+            "SELECT f.*, r.id AS rating_id, r.name AS rating_name, COUNT(fl_all.users_id) AS like_count " +
+                    "FROM films f " +
+                    "JOIN films_likes fl_other ON f.id = fl_other.films_id AND fl_other.users_id = ? " +
+                    "LEFT JOIN films_likes fl_user ON f.id = fl_user.films_id AND fl_user.users_id = ? " +
+                    "LEFT JOIN films_rating fr ON f.id = fr.films_id " +
+                    "LEFT JOIN rating r ON r.id = fr.rating_id " +
+                    "LEFT JOIN films_likes fl_all ON f.id = fl_all.films_id " +
+                    "WHERE fl_user.users_id IS NULL " +
+                    "GROUP BY f.id, f.name, f.description, f.releaseDate, f.duration, r.id, r.name " +
+                    "ORDER BY like_count DESC";
 
 
     @Override
@@ -166,6 +199,43 @@ public class FilmDbStorage implements FilmStorage {
         userDbStorage.getUserById(userId);
         jdbcTemplate.update(DELETE_FILM_LIKES_BY_ID_QUERY, id, userId);
         return getFilmById(id);
+    }
+
+    @Override
+    public Collection<Film> getCommonFilms(Long userId, Long friendId) {
+        userDbStorage.getUserById(userId);
+        userDbStorage.getUserById(friendId);
+
+        List<Film> films = jdbcTemplate.query(COMMON_FILMS_QUERY, new FilmRowMapper(), userId, friendId);
+        for (Film f : films) {
+            f.setGenres(loadGenres(f.getId()));
+            f.setLikes(loadLikes(f.getId()));
+        }
+        return films;
+    }
+
+    @Override
+    public Collection<Film> getRecommendations(Long userId) {
+        userDbStorage.getUserById(userId);
+
+        Long similarUserId;
+        try {
+            similarUserId = jdbcTemplate.queryForObject(
+                    MOST_SIMILAR_USER_QUERY,
+                    (rs, rowNum) -> rs.getLong("other_id"),
+                    userId,
+                    userId
+            );
+        } catch (DataAccessException e) {
+            return List.of();
+        }
+
+        List<Film> films = jdbcTemplate.query(RECOMMENDATIONS_QUERY, new FilmRowMapper(), similarUserId, userId);
+        for (Film f : films) {
+            f.setGenres(loadGenres(f.getId()));
+            f.setLikes(loadLikes(f.getId()));
+        }
+        return films;
     }
 
     private Set<Genre> loadGenres(Long filmId) {

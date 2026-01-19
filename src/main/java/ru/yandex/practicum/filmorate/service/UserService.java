@@ -7,6 +7,7 @@ import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
+import ru.yandex.practicum.filmorate.storage.FilmStorage;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -14,10 +15,12 @@ import java.util.*;
 @Service
 public class UserService {
     private final UserStorage userStorage;
-    private final ru.yandex.practicum.filmorate.storage.FilmStorage filmStorage;
+    private final FilmStorage filmStorage;
 
-    public UserService(@Qualifier("userDbStorage") UserStorage userStorage,
-                       @Qualifier("filmDbStorage") ru.yandex.practicum.filmorate.storage.FilmStorage filmStorage) {
+    public UserService(
+            @Qualifier("userDbStorage") UserStorage userStorage,
+            @Qualifier("filmDbStorage") FilmStorage filmStorage
+    ) {
         this.userStorage = userStorage;
         this.filmStorage = filmStorage;
     }

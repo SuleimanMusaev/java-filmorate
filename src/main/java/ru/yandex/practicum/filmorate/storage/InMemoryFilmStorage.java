@@ -121,6 +121,7 @@ public class InMemoryFilmStorage implements FilmStorage {
     public List<Film> findFilmsByDirectorId(Long directorId, String sortBy) {
         throw new UnsupportedOperationException("Метод не поддерживается в in-memory реализации");
     }
+
     @Override
     public void deleteFilmDirectors(Long filmId) {
         Film film = films.get(filmId);

@@ -10,12 +10,10 @@ import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.dao.mappers.DirectorRowMapper;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Director;
-import ru.yandex.practicum.filmorate.model.Rating;
 import ru.yandex.practicum.filmorate.storage.DirectorStorage;
 
 import java.sql.PreparedStatement;
 import java.sql.Statement;
-import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
@@ -59,6 +57,7 @@ public class DirectorDbStorage implements DirectorStorage {
             return director;
         }
     }
+
     @Override
     public Director findById(long id) {
         try {

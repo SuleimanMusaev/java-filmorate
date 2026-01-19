@@ -6,12 +6,11 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.model.Director;
 import ru.yandex.practicum.filmorate.model.Film;
 
 import java.time.LocalDate;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @Component("inMemoryFilmStorage")
 public class InMemoryFilmStorage implements FilmStorage {
@@ -100,5 +99,34 @@ public class InMemoryFilmStorage implements FilmStorage {
             throw new NotFoundException("Фильм с ID " + filmId + " не найден");
         }
         films.remove(filmId);
+    }
+
+
+    @Override
+    public void saveFilmDirectors(Long filmId, List<Director> directors) {
+        throw new UnsupportedOperationException("Метод не поддерживается в in-memory реализации");
+    }
+
+    @Override
+    public List<Director> loadDirectors(Film film) {
+        return new ArrayList<>();
+    }
+
+    @Override
+    public void loadDirectorsForFilms(List<Film> films) {
+        // Ничего не делаем для in-memory
+    }
+
+    @Override
+    public List<Film> findFilmsByDirectorId(Long directorId, String sortBy) {
+        throw new UnsupportedOperationException("Метод не поддерживается в in-memory реализации");
+    }
+    @Override
+    public void deleteFilmDirectors(Long filmId) {
+        Film film = films.get(filmId);
+        if (film == null) {
+            throw new NotFoundException("Фильм с ID " + filmId + " не найден");
+        }
+        film.setDirectors(new ArrayList<>());
     }
 }

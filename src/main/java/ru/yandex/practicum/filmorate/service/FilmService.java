@@ -6,8 +6,10 @@ import ru.yandex.practicum.filmorate.dao.GenreDbStorage;
 import ru.yandex.practicum.filmorate.dao.RatingDbStorage;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.model.Director;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.storage.DirectorStorage;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
@@ -21,15 +23,18 @@ public class FilmService {
     private final UserStorage userStorage;
     private final RatingDbStorage ratingDbStorage;
     private final GenreDbStorage genreDbStorage;
+    private final DirectorStorage directorStorage;
 
     public FilmService(@Qualifier("filmDbStorage") FilmStorage filmStorage,
                        @Qualifier("userDbStorage") UserStorage userStorage,
                        @Qualifier("ratingDbStorage") RatingDbStorage ratingDbStorage,
-                       @Qualifier("genreDbStorage") GenreDbStorage genreDbStorage) {
+                       @Qualifier("genreDbStorage") GenreDbStorage genreDbStorage,
+                       DirectorStorage directorStorage) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
         this.ratingDbStorage = ratingDbStorage;
         this.genreDbStorage = genreDbStorage;
+        this.directorStorage = directorStorage;
     }
 
     public Film getFilmById(Long id) {
@@ -78,6 +83,11 @@ public class FilmService {
                 genreDbStorage.getGenreById(g.getId());
             }
         }
+        if (film.getDirectors() != null) {
+            for (Director d : film.getDirectors()) {
+                directorStorage.findById(d.getId());
+            }
+        }
         return filmStorage.createFilm(film);
     }
 
@@ -102,10 +112,26 @@ public class FilmService {
         if (film.getMpa() == null) {
             throw new ValidationException("MPA is missing");
         }
+        if (film.getDirectors() != null) {
+            for (Director d : film.getDirectors()) {
+                directorStorage.findById(d.getId());
+            }
+        }
     }
 
     public void deleteFilm(Long filmId) {
         getFilmById(filmId);
         filmStorage.deleteFilm(filmId);
+    }
+
+    public List<Film> findFilmsByDirectorId(Long directorId, String sortBy) {
+        // Проверяем существование режиссера
+        directorStorage.findById(directorId);
+
+        if (!"year".equals(sortBy) && !"likes".equals(sortBy)) {
+            throw new ValidationException("Параметр sortBy должен быть 'year' или 'likes'");
+        }
+
+        return filmStorage.findFilmsByDirectorId(directorId, sortBy);
     }
 }

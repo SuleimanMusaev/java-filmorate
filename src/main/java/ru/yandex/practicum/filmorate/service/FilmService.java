@@ -55,12 +55,8 @@ public class FilmService {
         return filmStorage.getCommonFilms(userId, friendId);
     }
 
-    public Collection<Film> listFirstCountFilm(int count) {
-        Collection<Film> films;
-        films = sortingToDown().stream()
-                .limit(count)
-                .toList();
-        return films;
+    public Collection<Film> getPopularFilms(Integer count, Long genreId, Integer year) {
+        return filmStorage.getPopularFilms(count, genreId, year);
     }
 
     public List<Film> sortingToDown() {
@@ -105,7 +101,7 @@ public class FilmService {
             throw new ValidationException("Duration must be positive");
         }
 
-        if (film.getMpa() == null) {
+        if (film.getMpa() == null || film.getMpa().getId() == null) {
             throw new ValidationException("MPA is missing");
         }
     }

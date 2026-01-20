@@ -5,6 +5,7 @@ import lombok.*;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
+import ru.yandex.practicum.filmorate.model.Director;
 
 @Data
 @AllArgsConstructor
@@ -19,4 +20,5 @@ public class Film {
     private Set<Long> likes = new HashSet<>();
     private Set<Genre> genres = new HashSet<>();
     private Rating mpa;
+    private Set<Director> directors = new HashSet<>();
 }

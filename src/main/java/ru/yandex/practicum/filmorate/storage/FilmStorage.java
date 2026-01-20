@@ -20,4 +20,6 @@ public interface FilmStorage {
     Collection<Film> getCommonFilms(Long userId, Long friendId);
 
     Collection<Film> getRecommendations(Long userId);
+
+    Collection<Film> searchFilms(String query, boolean searchByTitle, boolean searchByDirector);
 }

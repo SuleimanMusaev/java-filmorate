@@ -255,4 +255,50 @@ public class FilmDbStorage implements FilmStorage {
                 filmId
         ));
     }
+
+    @Override
+    public Collection<Film> searchFilms(String query, boolean searchByTitle, boolean searchByDirector) {
+        // Базовый запрос с джойнами для получения информации о фильме и рейтинге
+        // Добавляем джойн с режиссерами (предполагаем наличие таблиц directors и film_directors)
+        StringBuilder sql = new StringBuilder(
+                "SELECT f.*, r.id AS rating_id, r.name AS rating_name, COUNT(fl.users_id) AS likes_count " +
+                        "FROM films f " +
+                        "LEFT JOIN films_rating fr ON f.id = fr.films_id " +
+                        "LEFT JOIN rating r ON fr.rating_id = r.id " +
+                        "LEFT JOIN film_directors fd ON f.id = fd.film_id " +
+                        "LEFT JOIN directors d ON fd.director_id = d.id " +
+                        "LEFT JOIN films_likes fl ON f.id = fl.films_id " +
+                        "WHERE "
+        );
+
+        // Динамическое формирование условия WHERE
+        List<Object> params = new ArrayList<>();
+        String searchParam = "%" + query.toLowerCase() + "%";
+
+        if (searchByTitle && searchByDirector) {
+            sql.append("(LOWER(f.name) LIKE ? OR LOWER(d.name) LIKE ?) ");
+            params.add(searchParam);
+            params.add(searchParam);
+        } else if (searchByTitle) {
+            sql.append("LOWER(f.name) LIKE ? ");
+            params.add(searchParam);
+        } else if (searchByDirector) {
+            sql.append("LOWER(d.name) LIKE ? ");
+            params.add(searchParam);
+        }
+
+        // Группировка и сортировка по популярности (количеству лайков)
+        sql.append("GROUP BY f.id, r.id ORDER BY likes_count DESC");
+
+        List<Film> films = jdbcTemplate.query(sql.toString(), new FilmRowMapper(), params.toArray());
+
+        // Догружаем жанры и (если нужно) режиссеров, так как RowMapper мапит только базовые поля
+        for (Film f : films) {
+            f.setGenres(loadGenres(f.getId()));
+            f.setLikes(loadLikes(f.getId()));
+            // f.setDirectors(loadDirectors(f.getId())); // Необходимо реализовать метод loadDirectors аналогично loadGenres
+        }
+
+        return films;
+    }
 }

@@ -109,4 +109,20 @@ public class FilmService {
             throw new ValidationException("MPA is missing");
         }
     }
+
+    public Collection<Film> searchFilms(String query, String by) {
+        if (query == null || by == null) {
+            return getAllFilms();
+        }
+
+        // Определяем, по каким полям искать
+        boolean searchByTitle = by.contains("title");
+        boolean searchByDirector = by.contains("director");
+
+        if (!searchByTitle && !searchByDirector) {
+            throw new ValidationException("Параметр 'by' должен содержать 'title' или 'director'");
+        }
+
+        return filmStorage.searchFilms(query, searchByTitle, searchByDirector);
+    }
 }

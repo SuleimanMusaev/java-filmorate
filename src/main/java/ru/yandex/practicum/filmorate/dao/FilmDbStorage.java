@@ -1,14 +1,16 @@
 package ru.yandex.practicum.filmorate.dao;
 
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.dao.mappers.FilmRowMapper;
-import ru.yandex.practicum.filmorate.dao.mappers.FilmSimpleRowMapper;
 import ru.yandex.practicum.filmorate.dao.mappers.GenreRowMapper;
 import ru.yandex.practicum.filmorate.exception.DatabaseException;
 import ru.yandex.practicum.filmorate.exception.DuplicateException;
@@ -30,6 +32,7 @@ import java.util.*;
 public class FilmDbStorage implements FilmStorage {
     private final JdbcTemplate jdbcTemplate;
     private final UserDbStorage userDbStorage;
+    private final RatingDbStorage ratingDbStorage;
 
     private static final String CREATE_QUERY =
             "INSERT INTO films (name,description,releaseDate,duration) VALUES (?,?,?,?)";
@@ -87,11 +90,15 @@ public class FilmDbStorage implements FilmStorage {
                     "GROUP BY f.id, f.name, f.description, f.releaseDate, f.duration, r.id, r.name " +
                     "ORDER BY like_count DESC";
 
-    private static final String POPULAR_FILMS_QUERY = "SELECT f.* FROM films f " +
+    private static final String POPULAR_FILMS_QUERY = "SELECT f.*, r.id AS rating_id, r.name AS rating_name " +
+            "FROM films f " +
             "LEFT JOIN films_likes fl ON f.id = fl.films_id " +
             "LEFT JOIN films_genre fg ON f.id = fg.films_id " +
-            "WHERE (? IS NULL OR fg.genre_id = ?) AND (? IS NULL OR YEAR(f.releaseDate) = ?) " +
-            "GROUP BY f.id " +
+            "LEFT JOIN films_rating fr ON f.id = fr.films_id " +
+            "LEFT JOIN rating r ON r.id = fr.rating_id " +
+            "WHERE (? IS NULL OR fg.genre_id = ?) " +
+            "  AND (? IS NULL OR YEAR(f.releaseDate) = ?) " +
+            "GROUP BY f.id, r.id, r.name " +
             "ORDER BY COUNT(fl.users_id) DESC " +
             "LIMIT ?";
 
@@ -125,13 +132,21 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Film createFilm(Film film) {
-        if (film.getReleaseDate() != null && film.getReleaseDate().isBefore(LocalDate.of(1895, 12, 28))) {
+
+        if (film.getReleaseDate() != null &&
+                film.getReleaseDate().isBefore(LocalDate.of(1895, 12, 28))) {
             throw new ValidationException("Дата релиза — не раньше 28 декабря 1895 года!");
         }
 
+        if (film.getMpa() == null || film.getMpa().getId() == null) {
+            throw new ValidationException("У рейтинга должен быть id.");
+        }
+        ratingDbStorage.getRatingById(film.getMpa().getId());
+
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(connection -> {
-            PreparedStatement stmt = connection.prepareStatement(CREATE_QUERY, Statement.RETURN_GENERATED_KEYS);
+            PreparedStatement stmt =
+                    connection.prepareStatement(CREATE_QUERY, Statement.RETURN_GENERATED_KEYS);
             stmt.setString(1, film.getName());
             stmt.setString(2, film.getDescription());
             stmt.setDate(3, Date.valueOf(film.getReleaseDate()));
@@ -150,23 +165,15 @@ public class FilmDbStorage implements FilmStorage {
                         return new Object[]{film.getId(), g.getId()};
                     })
                     .toList();
-            try {
-                jdbcTemplate.batchUpdate(INSERT_FILM_GENRES_QUERY, batch);
-            } catch (DataAccessException e) {
-                throw new DatabaseException("Ошибка при сохранении жанров: " + e.getMessage());
-            }
+            jdbcTemplate.batchUpdate(INSERT_FILM_GENRES_QUERY, batch);
         }
 
-        if (film.getMpa() != null) {
-            if (film.getMpa().getId() == null) {
-                throw new ValidationException("У рейтинга должен быть id.");
-            }
-            try {
-                jdbcTemplate.update(INSERT_FILM_RATINGS_BY_ID_QUERY, film.getId(), film.getMpa().getId());
-            } catch (DataAccessException e) {
-                throw new DatabaseException("Такого рейтинга не существует! " + e.getMessage());
-            }
-        }
+        jdbcTemplate.update(
+                INSERT_FILM_RATINGS_BY_ID_QUERY,
+                film.getId(),
+                film.getMpa().getId()
+        );
+
         return getFilmById(film.getId());
     }
 
@@ -249,13 +256,22 @@ public class FilmDbStorage implements FilmStorage {
     @Override
     public Collection<Film> getPopularFilms(Integer count, Long genreId, Integer year) {
 
-        int limit = count != null ? count : 10;
-        return jdbcTemplate.query(
+        int limit = (count != null) ? count : 10;
+
+        List<Film> films = jdbcTemplate.query(
                 POPULAR_FILMS_QUERY,
-                new FilmSimpleRowMapper(),
-                genreId, genreId, year, year,
+                new FilmRowMapper(),
+                genreId, genreId,
+                year, year,
                 limit
         );
+
+        for (Film film : films) {
+            film.setGenres(loadGenres(film.getId()));
+            film.setLikes(loadLikes(film.getId()));
+        }
+
+        return films;
     }
 
     private Set<Genre> loadGenres(Long filmId) {

@@ -55,6 +55,12 @@ public class FilmService {
         return filmStorage.deleteLikesFilm(id, userId);
     }
 
+    public Collection<Film> getCommonFilms(Long userId, Long friendId) {
+        userStorage.getUserById(userId);
+        userStorage.getUserById(friendId);
+        return filmStorage.getCommonFilms(userId, friendId);
+    }
+
     public Collection<Film> listFirstCountFilm(int count) {
         Collection<Film> films;
         films = sortingToDown().stream()

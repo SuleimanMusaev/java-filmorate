@@ -21,7 +21,7 @@ public interface FilmStorage {
 
     void deleteFilm(Long filmId);
 
-    //Методы для работы с режисерами
+    // Методы для работы с режисерами
     void saveFilmDirectors(Long filmId, List<Director> directors);
 
     List<Director> loadDirectors(Film film);
@@ -36,6 +36,7 @@ public interface FilmStorage {
 
     List<Film> findFilmsByDirectorId(Long directorId, String sortBy);
 
-    // Новый метод поиска
     Collection<Film> searchFilms(String query, String by);
+
+    Collection<Film> getPopularFilms(Integer count, Long genreId, Integer year);
 }

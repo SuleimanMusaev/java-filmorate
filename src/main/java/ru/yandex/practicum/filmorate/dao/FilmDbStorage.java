@@ -422,14 +422,16 @@ public class FilmDbStorage implements FilmStorage {
                 .collect(Collectors.toList());
 
         String inSql = String.join(",", Collections.nCopies(filmIds.size(), "?"));
+
         String sql = String.format(
-                "SELECT fd.film_id, d.id, d.name " + // Исправлено: d.id вместо d.director_id
+                "SELECT fd.film_id, d.id, d.name " +
                         "FROM film_director fd " +
-                        "JOIN director d ON fd.director_id = d.id " + // Исправлено: director вместо directors
+                        "JOIN director d ON fd.director_id = d.id " +
                         "WHERE fd.film_id IN (%s) " +
                         "ORDER BY fd.film_id", inSql);
 
-        Map<Long, List<Director>> directorsByFilmId = jdbcTemplate.query(sql, filmIds.toArray(),
+        Map<Long, List<Director>> directorsByFilmId = jdbcTemplate.query(
+                sql,
                 rs -> {
                     Map<Long, List<Director>> result = new HashMap<>();
                     while (rs.next()) {
@@ -438,12 +440,12 @@ public class FilmDbStorage implements FilmStorage {
                                 rs.getLong("id"),
                                 rs.getString("name")
                         );
-
-                        result.computeIfAbsent(filmId, k -> new ArrayList<>())
-                                .add(director);
+                        result.computeIfAbsent(filmId, k -> new ArrayList<>()).add(director);
                     }
                     return result;
-                });
+                },
+                filmIds.toArray()
+        );
 
         for (Film film : films) {
             List<Director> filmDirectors = directorsByFilmId.getOrDefault(film.getId(), new ArrayList<>());

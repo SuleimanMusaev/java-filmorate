@@ -6,7 +6,6 @@ import ru.yandex.practicum.filmorate.dto.FilmDto;
 import ru.yandex.practicum.filmorate.dto.mappers.FilmMapper;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.FilmService;
-
 import java.util.Collection;
 import java.util.List;
 
@@ -56,11 +55,6 @@ public class FilmController {
             @RequestParam(required = false) Integer year
     ) {
         return filmService.getPopularFilms(count, genreId, year);
-    }
-
-    @DeleteMapping("/{filmId}")
-    public void deleteFilm(@PathVariable Long filmId) {
-        filmService.deleteFilm(filmId);
     }
 
     @DeleteMapping("/{filmId}")

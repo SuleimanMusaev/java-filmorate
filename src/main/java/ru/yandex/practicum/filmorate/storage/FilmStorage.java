@@ -13,9 +13,11 @@ public interface FilmStorage {
 
     Film updateFilm(Film film);
 
-    public Film userLikesFilm(Long id, Long userId);
+    Film userLikesFilm(Long id, Long userId);
 
-    public Film deleteLikesFilm(Long id, Long userId);
+    Film deleteLikesFilm(Long id, Long userId);
+
+    void deleteFilm(Long filmId);
 
     Collection<Film> getCommonFilms(Long userId, Long friendId);
 

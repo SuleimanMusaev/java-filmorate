@@ -1,0 +1,696 @@
+{
+	"info": {
+		"_postman_id": "3a9ec9c7-f1d1-42c8-bb3f-b82adfc90038",
+		"name": "add-remove-endpoint",
+		"description": "Тестирование удаления пользователей и фильмов с каскадным удалением",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "49893595",
+		"_collection_link": "https://zhekab777-2768096.postman.co/workspace/Evgeni's-Workspace~d4f2c563-546a-44f6-811f-6db4aac02b73/collection/49893595-3a9ec9c7-f1d1-42c8-bb3f-b82adfc90038?action=share&source=collection_link&creator=49893595"
+	},
+	"item": [
+		{
+			"name": "🧹 1. Подготовка: Проверка доступности",
+			"item": [
+				{
+					"name": "GET Проверить доступность /users",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Endpoint /users доступен', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"console.log('Приложение доступно по адресу:', pm.request.url);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "localhost:8080/users",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"users"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "👤 2. Тестирование DELETE /users/{id}",
+			"item": [
+				{
+					"name": "POST Создать пользователя для удаления",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Пользователь создан', function() {",
+									"    pm.response.to.have.status(200);",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('id');",
+									"    pm.collectionVariables.set('created_user_id', response.id);",
+									"    console.log('✅ Создан пользователь ID:', response.id);",
+									"});",
+									"",
+									"// Если ошибка - логируем детали",
+									"if (pm.response.code !== 200) {",
+									"    console.log('❌ Ошибка создания пользователя:');",
+									"    console.log('Статус:', pm.response.code);",
+									"    console.log('Тело:', pm.response.text());",
+									"    console.log('URL был:', pm.request.url);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user_to_delete@test.ru\",\n  \"login\": \"user_delete\",\n  \"name\": \"User To Delete\",\n  \"birthday\": \"1990-01-01\"\n}"
+						},
+						"url": {
+							"raw": "localhost:8080/users",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE Удалить существующего пользователя",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Пользователь удален', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"// Проверяем что пользователь действительно удален",
+									"setTimeout(function() {",
+									"    pm.sendRequest({",
+									"        url: pm.collectionVariables.get('base_url') + '/users/' + pm.collectionVariables.get('created_user_id'),",
+									"        method: 'GET'",
+									"    }, function(err, res) {",
+									"        if (err) {",
+									"            console.log('❌ Ошибка проверки:', err);",
+									"            return;",
+									"        }",
+									"        if (res.code === 404) {",
+									"            console.log('✅ Пользователь успешно удален (404 Not Found)');",
+									"        } else {",
+									"            console.log('❌ Пользователь не удален, статус:', res.code);",
+									"            console.log('Ответ:', res.text());",
+									"        }",
+									"    });",
+									"}, 1000);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "localhost:8080/users/{{created_user_id}}",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"users",
+								"{{created_user_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE Попытка удалить несуществующего пользователя",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Несуществующий пользователь - 404', function() {",
+									"    pm.response.to.have.status(404);",
+									"});",
+									"pm.test('Сообщение об ошибке', function() {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('error');",
+									"    pm.expect(response.error).to.include('нет в списке');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "localhost:8080/users/99999",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"users",
+								"99999"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🎬 3. Тестирование DELETE /films/{id}",
+			"item": [
+				{
+					"name": "POST Создать фильм для удаления",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Фильм создан', function() {",
+									"    pm.response.to.have.status(200);",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('id');",
+									"    pm.collectionVariables.set('created_film_id', response.id);",
+									"    console.log('✅ Создан фильм ID:', response.id);",
+									"});",
+									"",
+									"// Если ошибка - логируем детали",
+									"if (pm.response.code !== 200) {",
+									"    console.log('❌ Ошибка создания фильма:');",
+									"    console.log('Статус:', pm.response.code);",
+									"    console.log('Тело:', pm.response.text());",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Фильм для удаления\",\n  \"description\": \"Этот фильм будет удален\",\n  \"releaseDate\": \"2000-01-01\",\n  \"duration\": 120,\n  \"mpa\": {\"id\": 1}\n}"
+						},
+						"url": {
+							"raw": "localhost:8080/films",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"films"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE Удалить существующий фильм",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Фильм удален', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"// Проверяем что фильм действительно удален",
+									"setTimeout(function() {",
+									"    pm.sendRequest({",
+									"        url: pm.collectionVariables.get('base_url') + '/films/' + pm.collectionVariables.get('created_film_id'),",
+									"        method: 'GET'",
+									"    }, function(err, res) {",
+									"        if (err) {",
+									"            console.log('❌ Ошибка проверки:', err);",
+									"            return;",
+									"        }",
+									"        if (res.code === 404) {",
+									"            console.log('✅ Фильм успешно удален (404 Not Found)');",
+									"        } else {",
+									"            console.log('❌ Фильм не удален, статус:', res.code);",
+									"            console.log('Ответ:', res.text());",
+									"        }",
+									"    });",
+									"}, 1000);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "localhost:8080/films/{{created_film_id}}",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"films",
+								"{{created_film_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE Попытка удалить несуществующий фильм",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Несуществующий фильм - 404', function() {",
+									"    pm.response.to.have.status(404);",
+									"});",
+									"pm.test('Сообщение об ошибке', function() {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('error');",
+									"    pm.expect(response.error).to.include('Фильм с ID 99999 не найден');",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "localhost:8080/films/99999",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"films",
+								"99999"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🔗 4. Тестирование каскадного удаления",
+			"item": [
+				{
+					"name": "POST Создать пользователя 1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const response = pm.response.json();",
+									"pm.collectionVariables.set('cascade_user1_id', response.id);",
+									"console.log('✅ Создан пользователь 1:', response.id);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"cascade_user1@test.ru\",\n  \"login\": \"cascade1\",\n  \"name\": \"Cascade User 1\",\n  \"birthday\": \"1990-01-01\"\n}"
+						},
+						"url": {
+							"raw": "localhost:8080/users",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "POST Создать пользователя 2 (друг)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const response = pm.response.json();",
+									"pm.collectionVariables.set('cascade_user2_id', response.id);",
+									"console.log('✅ Создан пользователь 2:', response.id);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"cascade_user2@test.ru\",\n  \"login\": \"cascade2\",\n  \"name\": \"Cascade User 2\",\n  \"birthday\": \"1995-02-02\"\n}"
+						},
+						"url": {
+							"raw": "localhost:8080/users",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "POST Создать фильм для лайков",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const response = pm.response.json();",
+									"pm.collectionVariables.set('cascade_film_id', response.id);",
+									"console.log('✅ Создан фильм:', response.id);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Фильм для каскадного теста\",\n  \"description\": \"Тест каскадного удаления\",\n  \"releaseDate\": \"2010-01-01\",\n  \"duration\": 100,\n  \"mpa\": {\"id\": 2}\n}"
+						},
+						"url": {
+							"raw": "localhost:8080/films",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"films"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PUT Добавить дружбу",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "localhost:8080/users/{{cascade_user1_id}}/friends/{{cascade_user2_id}}",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"users",
+								"{{cascade_user1_id}}",
+								"friends",
+								"{{cascade_user2_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PUT Добавить лайк от пользователя 1",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "localhost:8080/films/{{cascade_film_id}}/like/{{cascade_user1_id}}",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"films",
+								"{{cascade_film_id}}",
+								"like",
+								"{{cascade_user1_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE Удалить пользователя 1 (каскадное удаление)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Пользователь удален', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"// Проверяем каскадное удаление",
+									"setTimeout(function() {",
+									"    const baseUrl = pm.collectionVariables.get('base_url');",
+									"    const user1Id = pm.collectionVariables.get('cascade_user1_id');",
+									"    const user2Id = pm.collectionVariables.get('cascade_user2_id');",
+									"    const filmId = pm.collectionVariables.get('cascade_film_id');",
+									"    ",
+									"    console.log('🔍 Проверка каскадного удаления...');",
+									"    ",
+									"    // 1. Проверяем что пользователь 1 удален",
+									"    pm.sendRequest({",
+									"        url: baseUrl + '/users/' + user1Id,",
+									"        method: 'GET'",
+									"    }, function(err, res) {",
+									"        if (res && res.code === 404) {",
+									"            console.log('✅ Пользователь 1 удален');",
+									"        } else {",
+									"            console.log('❌ Пользователь 1 не удален, статус:', res ? res.code : 'нет ответа');",
+									"        }",
+									"    });",
+									"    ",
+									"    // 2. Проверяем что пользователь 2 не имеет друзей",
+									"    pm.sendRequest({",
+									"        url: baseUrl + '/users/' + user2Id + '/friends',",
+									"        method: 'GET'",
+									"    }, function(err, res) {",
+									"        if (res && res.code === 200) {",
+									"            const friends = res.json();",
+									"            if (friends.length === 0) {",
+									"                console.log('✅ Дружба удалена у пользователя 2');",
+									"            } else {",
+									"                console.log('❌ У пользователя 2 остались друзья:', friends.length);",
+									"            }",
+									"        }",
+									"    });",
+									"    ",
+									"    // 3. Проверяем что лайк удален у фильма",
+									"    pm.sendRequest({",
+									"        url: baseUrl + '/films/' + filmId,",
+									"        method: 'GET'",
+									"    }, function(err, res) {",
+									"        if (res && res.code === 200) {",
+									"            const film = res.json();",
+									"            const hasLike = film.likes && film.likes.includes(parseInt(user1Id));",
+									"            if (!hasLike) {",
+									"                console.log('✅ Лайк пользователя 1 удален из фильма');",
+									"            } else {",
+									"                console.log('❌ Лайк пользователя 1 остался у фильма');",
+									"            }",
+									"        }",
+									"    });",
+									"}, 1500);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "localhost:8080/users/{{cascade_user1_id}}",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"users",
+								"{{cascade_user1_id}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🧪 5. Дополнительные тесты",
+			"item": [
+				{
+					"name": "DELETE Удаление лайка фильма",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "localhost:8080/films/1/like/1",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"films",
+								"1",
+								"like",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE Удаление друга",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "localhost:8080/users/1/friends/2",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"users",
+								"1",
+								"friends",
+								"2"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"console.log('🚀 Начинаем тестирование DELETE endpoints');",
+					"console.log('Base URL:', pm.collectionVariables.get('base_url'));",
+					"console.log('Текущий запрос:', pm.info.requestName);"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Глобальные тесты",
+					"pm.test('Response time is acceptable', function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(3000);",
+					"});"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "created_user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "created_film_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "cascade_user1_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "cascade_user2_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "cascade_film_id",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

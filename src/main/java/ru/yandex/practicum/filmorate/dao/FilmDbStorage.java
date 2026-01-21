@@ -3,6 +3,7 @@ package ru.yandex.practicum.filmorate.dao;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
@@ -89,17 +90,16 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Film getFilmById(Long id) {
-        Film film;
         try {
-            film = jdbcTemplate.queryForObject(GET_ID_QUERY, new FilmRowMapper(), id);
+            Film film = jdbcTemplate.queryForObject(GET_ID_QUERY, new FilmRowMapper(), id);
+            film.setGenres(loadGenres(id));
+            film.setLikes(loadLikes(id));
+            return film;
+        } catch (EmptyResultDataAccessException e) {
+            throw new NotFoundException("Фильм с ID " + id + " не найден");
         } catch (DataAccessException e) {
-            throw new DatabaseException("Такого фильма не существует! " + e.getMessage());
+            throw new DatabaseException("Ошибка базы данных при получении фильма: " + e.getMessage());
         }
-
-        film.setGenres(loadGenres(id));
-        film.setLikes(loadLikes(id));
-
-        return film;
     }
 
     @Override
@@ -254,5 +254,15 @@ public class FilmDbStorage implements FilmStorage {
                 Long.class,
                 filmId
         ));
+    }
+
+    @Override
+    public void deleteFilm(Long filmId) {
+        String deleteFilmSql = "DELETE FROM films WHERE id = ?";
+        int rowsDeleted = jdbcTemplate.update(deleteFilmSql, filmId);
+
+        if (rowsDeleted == 0) {
+            throw new NotFoundException("Фильм с ID " + filmId + " не найден");
+        }
     }
 }

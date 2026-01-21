@@ -1,8 +1,8 @@
 package ru.yandex.practicum.filmorate.storage;
 
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
@@ -12,12 +12,15 @@ import java.time.LocalDate;
 import java.util.*;
 
 @Component("inMemoryFilmStorage")
-@RequiredArgsConstructor
 public class InMemoryFilmStorage implements FilmStorage {
-    private static final Logger log = LoggerFactory.getLogger(InMemoryFilmStorage.class);
-    UserStorage userStorage;
-
+    private final UserStorage userStorage;
     private final Map<Long, Film> films = new HashMap<>();
+
+    public InMemoryFilmStorage(@Qualifier("userInMemoryStorage") UserStorage userStorage) {
+        this.userStorage = userStorage;
+    }
+
+    private static final Logger log = LoggerFactory.getLogger(InMemoryFilmStorage.class);
 
     @Override
     public Film getFilmById(Long id) {
@@ -136,5 +139,13 @@ public class InMemoryFilmStorage implements FilmStorage {
                 .max()
                 .orElse(0);
         return ++currentMaxId;
+    }
+
+    @Override
+    public void deleteFilm(Long filmId) {
+        if (!films.containsKey(filmId)) {
+            throw new NotFoundException("Фильм с ID " + filmId + " не найден");
+        }
+        films.remove(filmId);
     }
 }

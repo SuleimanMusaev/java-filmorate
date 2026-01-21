@@ -7,39 +7,42 @@ import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Director;
 import ru.yandex.practicum.filmorate.storage.DirectorStorage;
 
-import java.util.Collection;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class DirectorService {
     private final DirectorStorage directorStorage;
 
-    public Collection<Director> getAllDirectors() {
-        return directorStorage.getAllDirectors();
-    }
-
-    public Director getDirectorById(Long id) {
-        return directorStorage.getDirectorById(id)
-                .orElseThrow(() -> new NotFoundException("Режиссёр с id = " + id + " не найден"));
-    }
-
-    public Director createDirector(Director director) {
-        if (director.getName() == null || director.getName().isBlank()) {
-            throw new ValidationException("Имя режиссёра не может быть пустым");
+    public Director findById(long id) {
+        Director director = directorStorage.findById(id);
+        if (director == null) {
+            throw new NotFoundException("Режиссер с id=" + id + " не найден");
         }
-        return directorStorage.createDirector(director);
+        return director;
     }
 
-    public Director updateDirector(Director director) {
+    public List<Director> findAll() {
+        return directorStorage.findAll();
+    }
+
+    public Director save(Director director) {
+        validateDirector(director);
+        return directorStorage.save(director);
+    }
+
+    public void deleteById(long id) {
+        findById(id);
+        directorStorage.deleteById(id);
+    }
+
+    public List<Director> findDirectorsByFilmId(long filmId) {
+        return directorStorage.findDirectorsByFilmId(filmId);
+    }
+
+    private void validateDirector(Director director) {
         if (director.getName() == null || director.getName().isBlank()) {
-            throw new ValidationException("Имя режиссёра не может быть пустым");
+            throw new ValidationException("Имя режиссера не может быть пустым");
         }
-        // Проверка на существование перед обновлением
-        getDirectorById(director.getId());
-        return directorStorage.updateDirector(director);
-    }
-
-    public void deleteDirector(Long id) {
-        directorStorage.deleteDirector(id);
     }
 }

@@ -1,22 +1,28 @@
 package ru.yandex.practicum.filmorate.storage;
 
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.model.Director;
 import ru.yandex.practicum.filmorate.model.Film;
 
+import java.time.LocalDate;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Component("inMemoryFilmStorage")
-@RequiredArgsConstructor
 public class InMemoryFilmStorage implements FilmStorage {
-    private static final Logger log = LoggerFactory.getLogger(InMemoryFilmStorage.class);
-    UserStorage userStorage;
-
+    private final UserStorage userStorage;
     private final Map<Long, Film> films = new HashMap<>();
+
+    public InMemoryFilmStorage(@Qualifier("userInMemoryStorage") UserStorage userStorage) {
+        this.userStorage = userStorage;
+    }
+
+    private static final Logger log = LoggerFactory.getLogger(InMemoryFilmStorage.class);
 
     @Override
     public Film getFilmById(Long id) {
@@ -30,7 +36,7 @@ public class InMemoryFilmStorage implements FilmStorage {
 
     @Override
     public Film createFilm(Film film) {
-        if (film.getReleaseDate().isBefore(Film.CINEMA_BIRTHDAY)) {
+        if (film.getReleaseDate().isBefore(LocalDate.of(1895, 12, 28))) {
             throw new ValidationException("Дата релиза — не раньше 28 декабря 1895 года!");
         }
         film.setId(getNextId());
@@ -46,7 +52,7 @@ public class InMemoryFilmStorage implements FilmStorage {
             throw new ValidationException("Id должен быть указан!");
         }
         if (films.containsKey(film.getId())) {
-            if (film.getReleaseDate().isBefore(Film.CINEMA_BIRTHDAY)) {
+            if (film.getReleaseDate().isBefore(LocalDate.of(1895, 12, 28))) {
                 throw new ValidationException("Дата релиза — не раньше 28 декабря 1895 года!");
             }
             films.put(film.getId(), film);
@@ -128,11 +134,6 @@ public class InMemoryFilmStorage implements FilmStorage {
         return result;
     }
 
-    @Override
-    public Collection<Film> getFilmsByDirector(Long directorId, String sortBy) {
-        return List.of();
-    }
-
     private Long getNextId() {
         long currentMaxId = films.keySet()
                 .stream()
@@ -143,16 +144,61 @@ public class InMemoryFilmStorage implements FilmStorage {
     }
 
     @Override
-    public Collection<Film> searchFilms(String query, boolean searchByTitle, boolean searchByDirector) {
+    public void deleteFilm(Long filmId) {
+        if (!films.containsKey(filmId)) {
+            throw new NotFoundException("Фильм с ID " + filmId + " не найден");
+        }
+        films.remove(filmId);
+    }
+
+
+    @Override
+    public void saveFilmDirectors(Long filmId, List<Director> directors) {
+        throw new UnsupportedOperationException("Метод не поддерживается в in-memory реализации");
+    }
+
+    @Override
+    public List<Director> loadDirectors(Film film) {
+        return new ArrayList<>();
+    }
+
+    @Override
+    public void loadDirectorsForFilms(List<Film> films) {
+        // Ничего не делаем для in-memory
+    }
+
+    @Override
+    public List<Film> findFilmsByDirectorId(Long directorId, String sortBy) {
+        throw new UnsupportedOperationException("Метод не поддерживается в in-memory реализации");
+    }
+
+    @Override
+    public void deleteFilmDirectors(Long filmId) {
+        Film film = films.get(filmId);
+        if (film == null) {
+            throw new NotFoundException("Фильм с ID " + filmId + " не найден");
+        }
+        film.setDirectors(new ArrayList<>());
+    }
+
+    @Override
+    public Collection<Film> searchFilms(String query, String by) {
         String lowerQuery = query.toLowerCase();
-        return getAllFilms().stream()
+        return films.values().stream()
                 .filter(film -> {
-                    boolean isTitleMatch = searchByTitle && film.getName().toLowerCase().contains(lowerQuery);
-                    boolean isDirectorMatch = searchByDirector && film.getDirectors().stream()
-                            .anyMatch(director -> director.getName().toLowerCase().contains(lowerQuery));
-                    return isTitleMatch || isDirectorMatch;
+                    boolean match = false;
+                    // Проверка по режиссеру (если список режиссеров не пуст)
+                    if (by.contains("director")) {
+                        match = film.getDirectors().stream()
+                                .anyMatch(d -> d.getName().toLowerCase().contains(lowerQuery));
+                    }
+                    // Проверка по названию (через ИЛИ, если уже нашли по режиссеру - true останется)
+                    if (by.contains("title")) {
+                        match = match || film.getName().toLowerCase().contains(lowerQuery);
+                    }
+                    return match;
                 })
                 .sorted((f1, f2) -> Integer.compare(f2.getLikes().size(), f1.getLikes().size()))
-                .toList();
+                .collect(Collectors.toList());
     }
 }

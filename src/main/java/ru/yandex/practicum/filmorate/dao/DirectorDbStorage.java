@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.dao;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -13,61 +14,83 @@ import ru.yandex.practicum.filmorate.storage.DirectorStorage;
 
 import java.sql.PreparedStatement;
 import java.sql.Statement;
-import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
+@Qualifier("directorDbStorage")
 public class DirectorDbStorage implements DirectorStorage {
     private final JdbcTemplate jdbcTemplate;
-    private final DirectorRowMapper directorRowMapper;
+
+    private static final String CREATE_QUERY = "INSERT INTO director (name) VALUES (?)";
+    private static final String GET_BY_ID_QUERY = "SELECT id, name FROM director WHERE id = ?";
+    private static final String GET_ALL_QUERY = "SELECT * FROM director ORDER BY id";
+    private static final String UPDATE_QUERY = "UPDATE director SET name = ? WHERE id = ?";
+    private static final String DELETE_QUERY = "DELETE FROM director WHERE id = ?";
+    private static final String GET_BY_FILM_ID_QUERY =
+            "SELECT d.id, d.name FROM director d " +
+                    "JOIN film_director fd ON d.id = fd.director_id " +
+                    "WHERE fd.film_id = ? ORDER BY d.name";
 
     @Override
-    public Collection<Director> getAllDirectors() {
-        String sql = "SELECT * FROM directors";
-        return jdbcTemplate.query(sql, directorRowMapper);
+    public Director save(Director director) {
+        if (director.getId() == null) {
+            // Создание нового режиссера
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+            jdbcTemplate.update(connection -> {
+                PreparedStatement stmt = connection.prepareStatement(CREATE_QUERY, Statement.RETURN_GENERATED_KEYS);
+                stmt.setString(1, director.getName());
+                return stmt;
+            }, keyHolder);
+            director.setId(Objects.requireNonNull(keyHolder.getKey()).longValue());
+            return director;
+        } else {
+            // Обновление существующего режиссера
+            int updated = jdbcTemplate.update(UPDATE_QUERY,
+                    director.getName(),
+                    director.getId());
+
+            if (updated == 0) {
+                throw new NotFoundException("Режиссер с id=" + director.getId() + " не найден");
+            }
+            return director;
+        }
     }
 
     @Override
-    public Optional<Director> getDirectorById(Long id) {
-        String sql = "SELECT * FROM directors WHERE id = ?";
+    public Director findById(long id) {
         try {
-            return Optional.ofNullable(jdbcTemplate.queryForObject(sql, directorRowMapper, id));
+            return jdbcTemplate.queryForObject(GET_BY_ID_QUERY, new DirectorRowMapper(), id);
         } catch (DataAccessException e) {
-            return Optional.empty();
+            throw new NotFoundException("Режиссер с id=" + id + " не найден");
         }
     }
 
     @Override
-    public Director createDirector(Director director) {
-        String sql = "INSERT INTO directors (name) VALUES (?)";
-        KeyHolder keyHolder = new GeneratedKeyHolder();
-        jdbcTemplate.update(connection -> {
-            PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-            stmt.setString(1, director.getName());
-            return stmt;
-        }, keyHolder);
-        director.setId(Objects.requireNonNull(keyHolder.getKey()).longValue());
-        return director;
+    public List<Director> findAll() {
+        return jdbcTemplate.query(GET_ALL_QUERY, new DirectorRowMapper());
     }
 
     @Override
-    public Director updateDirector(Director director) {
-        String sql = "UPDATE directors SET name = ? WHERE id = ?";
-        int rows = jdbcTemplate.update(sql, director.getName(), director.getId());
-        if (rows == 0) {
-            throw new NotFoundException("Режиссёр с id=" + director.getId() + " не найден.");
+    public void deleteById(long id) {
+        // Сначала проверяем существование
+        findById(id);
+
+        // Удаляем связи в film_director
+        String deleteLinksSql = "DELETE FROM film_director WHERE director_id = ?";
+        jdbcTemplate.update(deleteLinksSql, id);
+
+        // Удаляем самого режиссера
+        int deleted = jdbcTemplate.update(DELETE_QUERY, id);
+
+        if (deleted == 0) {
+            throw new NotFoundException("Режиссер с id=" + id + " не найден");
         }
-        return director;
     }
 
     @Override
-    public void deleteDirector(Long id) {
-        String sql = "DELETE FROM directors WHERE id = ?";
-        int rows = jdbcTemplate.update(sql, id);
-        if (rows == 0) {
-            throw new NotFoundException("Режиссёр с id=" + id + " не найден.");
-        }
+    public List<Director> findDirectorsByFilmId(long filmId) {
+        return jdbcTemplate.query(GET_BY_FILM_ID_QUERY, new DirectorRowMapper(), filmId);
     }
 }

@@ -1,14 +1,15 @@
 package ru.yandex.practicum.filmorate.service;
 
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.dao.GenreDbStorage;
 import ru.yandex.practicum.filmorate.dao.RatingDbStorage;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.model.Director;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.storage.DirectorStorage;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
@@ -22,26 +23,31 @@ public class FilmService {
     private final UserStorage userStorage;
     private final RatingDbStorage ratingDbStorage;
     private final GenreDbStorage genreDbStorage;
+    private final DirectorStorage directorStorage;
 
     public FilmService(@Qualifier("filmDbStorage") FilmStorage filmStorage,
                        @Qualifier("userDbStorage") UserStorage userStorage,
                        @Qualifier("ratingDbStorage") RatingDbStorage ratingDbStorage,
-                       @Qualifier("genreDbStorage")GenreDbStorage genreDbStorage) {
+                       @Qualifier("genreDbStorage") GenreDbStorage genreDbStorage,
+                       DirectorStorage directorStorage) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
         this.ratingDbStorage = ratingDbStorage;
         this.genreDbStorage = genreDbStorage;
+        this.directorStorage = directorStorage;
     }
 
     public Film getFilmById(Long id) {
-        try {
-            return filmStorage.getFilmById(id);
-        } catch (EmptyResultDataAccessException e) {
+        Film film = filmStorage.getFilmById(id);
+        if (film == null) {
             throw new NotFoundException("Такого фильма нет в списке!");
         }
+        return film;
     }
 
     public Film userLikesFilm(Long id, Long userId) {
+        Film film = getFilmById(id);//Проверка на существование фильма
+        userStorage.getUserById(userId);//Проверка на существование юзера
         return filmStorage.userLikesFilm(id, userId);
     }
 
@@ -71,21 +77,34 @@ public class FilmService {
         return listFilms;
     }
 
+    public Collection<Film> searchFilms(String query, String by) {
+        if (query == null || by == null) {
+            throw new ValidationException("Параметры query и by не могут быть null");
+        }
+
+        List<String> validParams = List.of("director", "title", "director,title", "title,director");
+        if (!validParams.contains(by)) {
+            throw new ValidationException("Параметр 'by' указан некорректно");
+        }
+
+        return filmStorage.searchFilms(query, by);
+    }
+
     public Collection<Film> getAllFilms() {
         return filmStorage.getAllFilms();
     }
 
     public Film createFilm(Film film) {
         validateFilm(film);
-        if (film.getMpa().getId() != null) {
-            ratingDbStorage.getRatingById(film.getMpa().getId());
-        } else {
-            throw new ValidationException("MPA ID is missing");
-        }
-
+        ratingDbStorage.getRatingById(film.getMpa().getId());
         if (film.getGenres() != null) {
             for (Genre g : film.getGenres()) {
                 genreDbStorage.getGenreById(g.getId());
+            }
+        }
+        if (film.getDirectors() != null) {
+            for (Director d : film.getDirectors()) {
+                directorStorage.findById(d.getId());
             }
         }
         return filmStorage.createFilm(film);
@@ -109,28 +128,29 @@ public class FilmService {
             throw new ValidationException("Duration must be positive");
         }
 
-        if (film.getReleaseDate() != null && film.getReleaseDate().isBefore(Film.CINEMA_BIRTHDAY)) {
-            throw new ValidationException("Дата релиза — не раньше 28 декабря 1895 года!");
-        }
-
         if (film.getMpa() == null) {
             throw new ValidationException("MPA is missing");
         }
+        if (film.getDirectors() != null) {
+            for (Director d : film.getDirectors()) {
+                directorStorage.findById(d.getId());
+            }
+        }
     }
 
-    public Collection<Film> searchFilms(String query, String by) {
-        if (query == null || by == null) {
-            return getAllFilms();
+    public void deleteFilm(Long filmId) {
+        getFilmById(filmId);
+        filmStorage.deleteFilm(filmId);
+    }
+
+    public List<Film> findFilmsByDirectorId(Long directorId, String sortBy) {
+        // Проверяем существование режиссера
+        directorStorage.findById(directorId);
+
+        if (!"year".equals(sortBy) && !"likes".equals(sortBy)) {
+            throw new ValidationException("Параметр sortBy должен быть 'year' или 'likes'");
         }
 
-        // Определяем, по каким полям искать
-        boolean searchByTitle = by.contains("title");
-        boolean searchByDirector = by.contains("director");
-
-        if (!searchByTitle && !searchByDirector) {
-            throw new ValidationException("Параметр 'by' должен содержать 'title' или 'director'");
-        }
-
-        return filmStorage.searchFilms(query, searchByTitle, searchByDirector);
+        return filmStorage.findFilmsByDirectorId(directorId, sortBy);
     }
 }

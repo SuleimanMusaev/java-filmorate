@@ -1,8 +1,14 @@
 package ru.yandex.practicum.filmorate.model;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Data
@@ -10,22 +16,13 @@ import java.util.Set;
 @NoArgsConstructor
 @Builder
 public class Film {
-    public static final LocalDate CINEMA_BIRTHDAY = LocalDate.of(1895, 12, 28);
-
     private Long id;
     private String name;
     private String description;
     private LocalDate releaseDate;
     private int duration;
-
-    @Builder.Default
     private Set<Long> likes = new HashSet<>();
-
-    @Builder.Default
     private Set<Genre> genres = new HashSet<>();
-
     private Rating mpa;
-
-    @Builder.Default
-    private Set<Director> directors = new HashSet<>();
+    private List<Director> directors = new ArrayList<>();
 }

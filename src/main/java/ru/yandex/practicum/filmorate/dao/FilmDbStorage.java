@@ -109,51 +109,6 @@ public class FilmDbStorage implements FilmStorage {
             "ORDER BY COUNT(fl.users_id) DESC " +
             "LIMIT ?";
 
-    private static final String COMMON_FILMS_QUERY =
-            "SELECT f.*, r.id AS rating_id, r.name AS rating_name, COUNT(fl_all.users_id) AS like_count " +
-                    "FROM films f " +
-                    "JOIN films_likes fl_user ON f.id = fl_user.films_id AND fl_user.users_id = ? " +
-                    "JOIN films_likes fl_friend ON f.id = fl_friend.films_id AND fl_friend.users_id = ? " +
-                    "LEFT JOIN films_rating fr ON f.id = fr.films_id " +
-                    "LEFT JOIN rating r ON r.id = fr.rating_id " +
-                    "LEFT JOIN films_likes fl_all ON f.id = fl_all.films_id " +
-                    "GROUP BY f.id, f.name, f.description, f.releaseDate, f.duration, r.id, r.name " +
-                    "ORDER BY like_count DESC";
-
-    private static final String MOST_SIMILAR_USER_QUERY =
-            "SELECT fl_other.users_id AS other_id, COUNT(*) AS common_count " +
-                    "FROM films_likes fl_user " +
-                    "JOIN films_likes fl_other ON fl_user.films_id = fl_other.films_id " +
-                    "WHERE fl_user.users_id = ? AND fl_other.users_id <> ? " +
-                    "GROUP BY fl_other.users_id " +
-                    "ORDER BY common_count DESC " +
-                    "LIMIT 1";
-
-    private static final String RECOMMENDATIONS_QUERY =
-            "SELECT f.*, r.id AS rating_id, r.name AS rating_name, COUNT(fl_all.users_id) AS like_count " +
-                    "FROM films f " +
-                    "JOIN films_likes fl_other ON f.id = fl_other.films_id AND fl_other.users_id = ? " +
-                    "LEFT JOIN films_likes fl_user ON f.id = fl_user.films_id AND fl_user.users_id = ? " +
-                    "LEFT JOIN films_rating fr ON f.id = fr.films_id " +
-                    "LEFT JOIN rating r ON r.id = fr.rating_id " +
-                    "LEFT JOIN films_likes fl_all ON f.id = fl_all.films_id " +
-                    "WHERE fl_user.users_id IS NULL " +
-                    "GROUP BY f.id, f.name, f.description, f.releaseDate, f.duration, r.id, r.name " +
-                    "ORDER BY like_count DESC";
-
-    private static final String POPULAR_FILMS_QUERY = "SELECT f.*, r.id AS rating_id, r.name AS rating_name " +
-            "FROM films f " +
-            "LEFT JOIN films_likes fl ON f.id = fl.films_id " +
-            "LEFT JOIN films_genre fg ON f.id = fg.films_id " +
-            "LEFT JOIN films_rating fr ON f.id = fr.films_id " +
-            "LEFT JOIN rating r ON r.id = fr.rating_id " +
-            "WHERE (? IS NULL OR fg.genre_id = ?) " +
-            "  AND (? IS NULL OR YEAR(f.releaseDate) = ?) " +
-            "GROUP BY f.id, r.id, r.name " +
-            "ORDER BY COUNT(fl.users_id) DESC " +
-            "LIMIT ?";
-
-
     @Override
     public Film getFilmById(Long id) {
         try {

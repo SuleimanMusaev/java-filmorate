@@ -133,6 +133,11 @@ public class InMemoryFilmStorage implements FilmStorage {
         return result;
     }
 
+    @Override
+    public Collection<Film> getPopularFilms(Integer count, Long genreId, Integer year) {
+        return List.of();
+    }
+
     private Long getNextId() {
         long currentMaxId = films.keySet()
                 .stream()

@@ -22,9 +22,4 @@ public class RatingController {
     public Rating getRatingById(@PathVariable("id") long id) {
         return ratingService.getRatingById(id);
     }
-
-    @PostMapping
-    public Rating createRating(@RequestBody Rating rating) {
-        return ratingService.createRating(rating);
-    }
 }

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.filmorate.dao.mappers.DirectorRowMapper;
 import ru.yandex.practicum.filmorate.dao.mappers.FilmRowMapper;
+import ru.yandex.practicum.filmorate.dao.mappers.FilmSimpleRowMapper;
 import ru.yandex.practicum.filmorate.dao.mappers.GenreRowMapper;
 import ru.yandex.practicum.filmorate.exception.DatabaseException;
 import ru.yandex.practicum.filmorate.exception.DuplicateException;
@@ -98,6 +99,14 @@ public class FilmDbStorage implements FilmStorage {
                     "WHERE fl_user.users_id IS NULL " +
                     "GROUP BY f.id, f.name, f.description, f.releaseDate, f.duration, r.id, r.name " +
                     "ORDER BY like_count DESC";
+
+    private static final String POPULAR_FILMS_QUERY = "SELECT f.* FROM films f " +
+            "LEFT JOIN films_likes fl ON f.id = fl.films_id " +
+            "LEFT JOIN films_genre fg ON f.id = fg.films_id " +
+            "WHERE (? IS NULL OR fg.genre_id = ?) AND (? IS NULL OR YEAR(f.releaseDate) = ?) " +
+            "GROUP BY f.id " +
+            "ORDER BY COUNT(fl.users_id) DESC " +
+            "LIMIT ?";
 
 
     @Override
@@ -277,6 +286,18 @@ public class FilmDbStorage implements FilmStorage {
             f.setLikes(loadLikes(f.getId()));
         }
         return films;
+    }
+
+    @Override
+    public Collection<Film> getPopularFilms(Integer count, Long genreId, Integer year) {
+
+        int limit = count != null ? count : 10;
+        return jdbcTemplate.query(
+                POPULAR_FILMS_QUERY,
+                new FilmSimpleRowMapper(),
+                genreId, genreId, year, year,
+                limit
+        );
     }
 
     private Set<Genre> loadGenres(Long filmId) {

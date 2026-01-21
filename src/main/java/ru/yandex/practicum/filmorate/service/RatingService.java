@@ -12,10 +12,6 @@ import java.util.Collection;
 public class RatingService {
     private final RatingStorage ratingStorage;
 
-    public Rating createRating(Rating rating) {
-        return ratingStorage.createRating(rating);
-    }
-
     public Rating getRatingById(Long id) {
         return ratingStorage.getRatingById(id);
     }

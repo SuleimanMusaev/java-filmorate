@@ -50,8 +50,17 @@ public class FilmController {
     }
 
     @GetMapping("/popular")
-    public Collection<Film> listFirstCountFilm(@RequestParam(defaultValue = "10") int count) {
-        return filmService.listFirstCountFilm(count);
+    public Collection<Film> getPopularFilms(
+            @RequestParam(defaultValue = "10") Integer count,
+            @RequestParam(required = false) Long genreId,
+            @RequestParam(required = false) Integer year
+    ) {
+        return filmService.getPopularFilms(count, genreId, year);
+    }
+
+    @DeleteMapping("/{filmId}")
+    public void deleteFilm(@PathVariable Long filmId) {
+        filmService.deleteFilm(filmId);
     }
 
     @DeleteMapping("/{filmId}")

@@ -31,7 +31,7 @@ public class InMemoryFilmStorage implements FilmStorage {
 
     @Override
     public Film createFilm(Film film) {
-        if (film.getReleaseDate().isBefore(LocalDate.of(1895, 12, 28))) {
+        if (film.getReleaseDate().isBefore(Film.CINEMA_BIRTHDAY)) {
             throw new ValidationException("Дата релиза — не раньше 28 декабря 1895 года!");
         }
         film.setId(getNextId());
@@ -47,7 +47,7 @@ public class InMemoryFilmStorage implements FilmStorage {
             throw new ValidationException("Id должен быть указан!");
         }
         if (films.containsKey(film.getId())) {
-            if (film.getReleaseDate().isBefore(LocalDate.of(1895, 12, 28))) {
+            if (film.getReleaseDate().isBefore(Film.CINEMA_BIRTHDAY)) {
                 throw new ValidationException("Дата релиза — не раньше 28 декабря 1895 года!");
             }
             films.put(film.getId(), film);

@@ -77,7 +77,12 @@ public class FilmService {
 
     public Film createFilm(Film film) {
         validateFilm(film);
-        ratingDbStorage.getRatingById(film.getMpa().getId());
+        if (film.getMpa().getId() != null) {
+            ratingDbStorage.getRatingById(film.getMpa().getId());
+        } else {
+            throw new ValidationException("MPA ID is missing");
+        }
+
         if (film.getGenres() != null) {
             for (Genre g : film.getGenres()) {
                 genreDbStorage.getGenreById(g.getId());
@@ -92,7 +97,6 @@ public class FilmService {
     }
 
     private void validateFilm(Film film) {
-
         if (film.getName() == null || film.getName().isBlank()) {
             throw new ValidationException("Name is empty");
         }
@@ -103,6 +107,10 @@ public class FilmService {
 
         if (film.getDuration() <= 0) {
             throw new ValidationException("Duration must be positive");
+        }
+
+        if (film.getReleaseDate() != null && film.getReleaseDate().isBefore(Film.CINEMA_BIRTHDAY)) {
+            throw new ValidationException("Дата релиза — не раньше 28 декабря 1895 года!");
         }
 
         if (film.getMpa() == null) {

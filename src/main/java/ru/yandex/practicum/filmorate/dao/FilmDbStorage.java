@@ -9,7 +9,6 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.dao.mappers.DirectorRowMapper;
 import ru.yandex.practicum.filmorate.dao.mappers.FilmRowMapper;
-import ru.yandex.practicum.filmorate.dao.mappers.GenreRowMapper;
 import ru.yandex.practicum.filmorate.exception.DatabaseException;
 import ru.yandex.practicum.filmorate.exception.DuplicateException;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
@@ -22,13 +21,15 @@ import ru.yandex.practicum.filmorate.storage.FilmStorage;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
-import java.time.LocalDate;
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
 @Qualifier("filmDbStorage")
 public class FilmDbStorage implements FilmStorage {
+
     private final JdbcTemplate jdbcTemplate;
     private final UserDbStorage userDbStorage;
     private final DirectorDbStorage directorDbStorage;
@@ -98,28 +99,94 @@ public class FilmDbStorage implements FilmStorage {
         } catch (DataAccessException e) {
             throw new DatabaseException("Такого фильма не существует! " + e.getMessage());
         }
-
-        film.setGenres(loadGenres(id));
-        film.setLikes(loadLikes(id));
-        film.setDirectors(loadDirectors(id)); // Загружаем режиссеров
-
+        setFilmDependencies(List.of(film));
         return film;
     }
 
     @Override
     public Collection<Film> getAllFilms() {
-        List<Film> films = jdbcTemplate.query(GET_ALL_QUERY, new FilmRowMapper());
-        for (Film f : films) {
-            f.setGenres(loadGenres(f.getId()));
-            f.setLikes(loadLikes(f.getId()));
-            f.setDirectors(loadDirectors(f.getId())); // Загружаем режиссеров
-        }
+        String sql = "SELECT f.*, r.id AS rating_id, r.name AS rating_name " +
+                "FROM films f " +
+                "LEFT JOIN films_rating fr ON f.id = fr.films_id " +
+                "LEFT JOIN rating r ON r.id = fr.rating_id";
+
+        List<Film> films = jdbcTemplate.query(sql, new FilmRowMapper());
+
+        setFilmDependencies(films);
         return films;
+    }
+
+    private void setFilmDependencies(List<Film> films) {
+        if (films.isEmpty()) return;
+
+        // Создаем Map для быстрого доступа к фильму по ID
+        Map<Long, Film> filmMap = films.stream()
+                .collect(Collectors.toMap(Film::getId, Function.identity()));
+
+        List<Long> filmIds = films.stream().map(Film::getId).toList();
+
+        // Загружаем данные пачками
+        loadGenresBatch(filmMap, filmIds);
+        loadDirectorsBatch(filmMap, filmIds);
+        loadLikesBatch(filmMap, filmIds);
+    }
+
+    private void loadGenresBatch(Map<Long, Film> filmMap, List<Long> ids) {
+        String inSql = String.join(",", Collections.nCopies(ids.size(), "?"));
+        String sql = "SELECT fg.films_id, g.id, g.name " +
+                "FROM genre g " +
+                "JOIN films_genre fg ON g.id = fg.genre_id " +
+                "WHERE fg.films_id IN (" + inSql + ") " +
+                "ORDER BY g.id";
+
+        jdbcTemplate.query(sql, (rs) -> {
+            // Внутри callback-а распределяем жанры по фильмам
+            long filmId = rs.getLong("films_id");
+            Film film = filmMap.get(filmId);
+            if (film != null) {
+                film.getGenres().add(Genre.builder()
+                        .id(rs.getLong("id"))
+                        .name(rs.getString("name"))
+                        .build());
+            }
+        }, ids.toArray());
+    }
+
+    private void loadDirectorsBatch(Map<Long, Film> filmMap, List<Long> ids) {
+        String inSql = String.join(",", Collections.nCopies(ids.size(), "?"));
+        String sql = "SELECT fd.film_id, d.id, d.name " +
+                "FROM directors d " +
+                "JOIN film_directors fd ON d.id = fd.director_id " +
+                "WHERE fd.film_id IN (" + inSql + ")";
+
+        jdbcTemplate.query(sql, (rs) -> {
+            long filmId = rs.getLong("film_id");
+            Film film = filmMap.get(filmId);
+            if (film != null) {
+                film.getDirectors().add(Director.builder()
+                        .id(rs.getLong("id"))
+                        .name(rs.getString("name"))
+                        .build());
+            }
+        }, ids.toArray());
+    }
+
+    private void loadLikesBatch(Map<Long, Film> filmMap, List<Long> ids) {
+        String inSql = String.join(",", Collections.nCopies(ids.size(), "?"));
+        String sql = "SELECT films_id, users_id FROM films_likes WHERE films_id IN (" + inSql + ")";
+
+        jdbcTemplate.query(sql, (rs) -> {
+            long filmId = rs.getLong("films_id");
+            Film film = filmMap.get(filmId);
+            if (film != null) {
+                film.getLikes().add(rs.getLong("users_id"));
+            }
+        }, ids.toArray());
     }
 
     @Override
     public Film createFilm(Film film) {
-        if (film.getReleaseDate() != null && film.getReleaseDate().isBefore(LocalDate.of(1895, 12, 28))) {
+        if (film.getReleaseDate() != null && film.getReleaseDate().isBefore(Film.CINEMA_BIRTHDAY)) {
             throw new ValidationException("Дата релиза — не раньше 28 декабря 1895 года!");
         }
 
@@ -132,6 +199,7 @@ public class FilmDbStorage implements FilmStorage {
             stmt.setInt(4, film.getDuration());
             return stmt;
         }, keyHolder);
+
         film.setId(Objects.requireNonNull(keyHolder.getKey()).longValue());
 
         // Сохранение жанров
@@ -246,11 +314,8 @@ public class FilmDbStorage implements FilmStorage {
         userDbStorage.getUserById(friendId);
 
         List<Film> films = jdbcTemplate.query(COMMON_FILMS_QUERY, new FilmRowMapper(), userId, friendId);
-        for (Film f : films) {
-            f.setGenres(loadGenres(f.getId()));
-            f.setLikes(loadLikes(f.getId()));
-            f.setDirectors(loadDirectors(f.getId()));
-        }
+
+        setFilmDependencies(films);
         return films;
     }
 
@@ -262,19 +327,13 @@ public class FilmDbStorage implements FilmStorage {
             similarUserId = jdbcTemplate.queryForObject(
                     MOST_SIMILAR_USER_QUERY,
                     (rs, rowNum) -> rs.getLong("other_id"),
-                    userId,
-                    userId
+                    userId, userId
             );
         } catch (DataAccessException e) {
             return List.of();
         }
-
         List<Film> films = jdbcTemplate.query(RECOMMENDATIONS_QUERY, new FilmRowMapper(), similarUserId, userId);
-        for (Film f : films) {
-            f.setGenres(loadGenres(f.getId()));
-            f.setLikes(loadLikes(f.getId()));
-            f.setDirectors(loadDirectors(f.getId()));
-        }
+        setFilmDependencies(films);
         return films;
     }
 
@@ -295,11 +354,7 @@ public class FilmDbStorage implements FilmStorage {
                 "ORDER BY " + (sortBy.equals("year") ? "f.releaseDate" : "COUNT(fl.users_id) DESC");
 
         List<Film> films = jdbcTemplate.query(sql, new FilmRowMapper(), directorId);
-        for (Film f : films) {
-            f.setGenres(loadGenres(f.getId()));
-            f.setLikes(loadLikes(f.getId()));
-            f.setDirectors(loadDirectors(f.getId()));
-        }
+        setFilmDependencies(films);
         return films;
     }
 
@@ -362,14 +417,9 @@ public class FilmDbStorage implements FilmStorage {
         }
 
         sql.append("GROUP BY f.id, r.id ORDER BY likes_count DESC");
+
         List<Film> films = jdbcTemplate.query(sql.toString(), new FilmRowMapper(), params.toArray());
-
-        for (Film f : films) {
-            f.setGenres(loadGenres(f.getId()));
-            f.setLikes(loadLikes(f.getId()));
-            f.setDirectors(loadDirectors(f.getId()));
-        }
-
+        setFilmDependencies(films);
         return films;
     }
 }

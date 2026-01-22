@@ -149,9 +149,4 @@ public class FilmService {
 
         return filmStorage.findFilmsByDirectorId(directorId, sortBy);
     }
-
-    public Film findById(Long id) {
-        return filmStorage.findById(id)
-                .orElseThrow(() -> new NotFoundException("Фильм с id=" + id + " не найден"));
-    }
 }

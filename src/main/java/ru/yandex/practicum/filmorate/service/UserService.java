@@ -42,32 +42,25 @@ public class UserService {
     }
 
     public User makeFriendship(Long id, Long friendId) {
-        User user = userStorage.getUserById(id);
-        User friend = userStorage.getUserById(friendId);
-        if (user == null || friend == null) {
-            throw new NotFoundException("Пользователь не найден");
-        }
+        userStorage.getUserById(id);
+        userStorage.getUserById(friendId);
         userStorage.createFriendship(id, friendId);
         return userStorage.getUserById(id);
     }
 
     public User deleteFriendship(Long id, Long friendId) {
-        // Сначала проверяем, существуют ли пользователи, чтобы вернуть 404, если кого-то нет
         userStorage.getUserById(id);
         userStorage.getUserById(friendId);
-
         userStorage.deleteFriendship(id, friendId);
         return userStorage.getUserById(id);
     }
 
     public Collection<User> listOfFriends(Long id) {
-        // Проверяем существование пользователя перед запросом списка
         userStorage.getUserById(id);
         return userStorage.getFriends(id);
     }
 
     public Collection<User> listOfCommonFriends(Long id, Long otherId) {
-        // Проверяем существование обоих пользователей
         userStorage.getUserById(id);
         userStorage.getUserById(otherId);
 

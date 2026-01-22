@@ -48,6 +48,8 @@ public class ReviewService {
     }
 
     public void addLike(Long reviewId, Long userId) {
+        reviewStorage.getReviewById(reviewId);
+        userStorage.getUserById(userId);
         reviewStorage.addLike(reviewId, userId);
     }
 

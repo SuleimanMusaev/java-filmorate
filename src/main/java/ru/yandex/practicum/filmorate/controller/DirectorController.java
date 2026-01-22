@@ -1,5 +1,6 @@
 package ru.yandex.practicum.filmorate.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.Director;
@@ -19,17 +20,17 @@ public class DirectorController {
     }
 
     @GetMapping("/{id}")
-    public Director getById(@PathVariable long id) {
+    public Director getById( @PathVariable long id) {
         return directorService.findById(id);
     }
 
     @PostMapping
-    public Director create(@RequestBody Director director) { // Убрали @Valid
+    public Director create(@Valid @RequestBody Director director) { // Убрали @Valid
         return directorService.save(director);
     }
 
     @PutMapping
-    public Director update(@RequestBody Director director) { // Убрали @Valid
+    public Director update(@Valid @RequestBody Director director) { // Убрали @Valid
         return directorService.save(director);
     }
 

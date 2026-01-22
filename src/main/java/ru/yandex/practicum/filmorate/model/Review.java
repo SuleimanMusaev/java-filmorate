@@ -1,6 +1,5 @@
 package ru.yandex.practicum.filmorate.model;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,13 +11,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Review {
-    private Long reviewId;
+    private Long id; // заменить reviewId на id
 
     @NotNull
     private String content;
 
     @NotNull
-    @JsonProperty("isPositive")
     private Boolean isPositive;
 
     @NotNull
@@ -27,5 +25,6 @@ public class Review {
     @NotNull
     private Long filmId;
 
-    private int useful;
+    @Builder.Default
+    private Integer useful = 0; // Integer вместо int для null-safety
 }

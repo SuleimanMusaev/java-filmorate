@@ -16,6 +16,7 @@ import java.util.Collection;
 @RequestMapping("/users")
 public class UserController {
     private final UserService userService;
+    private final UserMapper userMapper;
 
     @GetMapping
     public Collection<User> getAllUsers() {
@@ -29,13 +30,13 @@ public class UserController {
 
     @PostMapping
     public User createUser(@Valid @RequestBody UserDto userDto) {
-        User user = UserMapper.mapToUser(userDto);
+        User user = userMapper.mapToUser(userDto);
         return userService.createUser(user);
     }
 
     @PutMapping
     public User updateUser(@Valid @RequestBody UserDto userDto) {
-        User user = UserMapper.mapToUser(userDto);
+        User user = userMapper.mapToUser(userDto);
         return userService.updateUser(user);
     }
 

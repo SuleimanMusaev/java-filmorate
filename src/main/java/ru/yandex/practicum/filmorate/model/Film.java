@@ -21,8 +21,14 @@ public class Film {
     private String description;
     private LocalDate releaseDate;
     private int duration;
+
+    @Builder.Default
     private Set<Long> likes = new HashSet<>();
+
+    @Builder.Default
     private Set<Genre> genres = new HashSet<>();
     private Rating mpa;
+
+    @Builder.Default
     private List<Director> directors = new ArrayList<>();
 }

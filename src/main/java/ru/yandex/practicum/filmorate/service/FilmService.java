@@ -73,6 +73,19 @@ public class FilmService {
         return listFilms;
     }
 
+    public Collection<Film> searchFilms(String query, String by) {
+        if (query == null || by == null) {
+            throw new ValidationException("Параметры query и by не могут быть null");
+        }
+
+        List<String> validParams = List.of("director", "title", "director,title", "title,director");
+        if (!validParams.contains(by)) {
+            throw new ValidationException("Параметр 'by' указан некорректно");
+        }
+
+        return filmStorage.searchFilms(query, by);
+    }
+
     public Collection<Film> getAllFilms() {
         return filmStorage.getAllFilms();
     }

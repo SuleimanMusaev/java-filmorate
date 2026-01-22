@@ -11,7 +11,6 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.filmorate.dao.mappers.DirectorRowMapper;
 import ru.yandex.practicum.filmorate.dao.mappers.FilmRowMapper;
-import ru.yandex.practicum.filmorate.dao.mappers.FilmSimpleRowMapper;
 import ru.yandex.practicum.filmorate.dao.mappers.GenreRowMapper;
 import ru.yandex.practicum.filmorate.exception.DatabaseException;
 import ru.yandex.practicum.filmorate.exception.DuplicateException;
@@ -21,6 +20,7 @@ import ru.yandex.practicum.filmorate.model.Director;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
+import ru.yandex.practicum.filmorate.dao.mappers.FilmRowMapper;
 
 import java.sql.Date;
 import java.sql.PreparedStatement;
@@ -101,13 +101,18 @@ public class FilmDbStorage implements FilmStorage {
                     "GROUP BY f.id, f.name, f.description, f.releaseDate, f.duration, r.id, r.name " +
                     "ORDER BY like_count DESC";
 
-    private static final String POPULAR_FILMS_QUERY = "SELECT f.* FROM films f " +
+    private static final String POPULAR_FILMS_QUERY = "SELECT f.*, r.id AS rating_id, r.name AS rating_name " +
+            "FROM films f " +
             "LEFT JOIN films_likes fl ON f.id = fl.films_id " +
             "LEFT JOIN films_genre fg ON f.id = fg.films_id " +
-            "WHERE (? IS NULL OR fg.genre_id = ?) AND (? IS NULL OR YEAR(f.releaseDate) = ?) " +
-            "GROUP BY f.id " +
+            "LEFT JOIN films_rating fr ON f.id = fr.films_id " +
+            "LEFT JOIN rating r ON r.id = fr.rating_id " +
+            "WHERE (? IS NULL OR fg.genre_id = ?) " +
+            "  AND (? IS NULL OR YEAR(f.releaseDate) = ?) " +
+            "GROUP BY f.id, r.id, r.name " +
             "ORDER BY COUNT(fl.users_id) DESC " +
             "LIMIT ?";
+
 
     @Override
     public Film getFilmById(Long id) {
@@ -236,6 +241,49 @@ public class FilmDbStorage implements FilmStorage {
     }
 
     @Override
+    public Collection<Film> searchFilms(String query, String by) {
+        String baseQuery = "SELECT f.*, r.id AS rating_id, r.name AS rating_name " +
+                "FROM films f " +
+                "LEFT JOIN films_rating fr ON f.id = fr.films_id " +
+                "LEFT JOIN rating r ON fr.rating_id = r.id " +
+                "LEFT JOIN film_director fd ON f.id = fd.film_id " +
+                "LEFT JOIN director d ON fd.director_id = d.id " +
+                "LEFT JOIN films_likes fl ON f.id = fl.films_id ";
+
+        StringBuilder whereClause = new StringBuilder("WHERE ");
+        List<Object> params = new ArrayList<>();
+        String searchParam = "%" + query.toLowerCase() + "%";
+
+        boolean searchByDirector = by.contains("director");
+        boolean searchByTitle = by.contains("title");
+
+        if (searchByDirector && searchByTitle) {
+            whereClause.append("(LOWER(d.name) LIKE ? OR LOWER(f.name) LIKE ?) ");
+            params.add(searchParam);
+            params.add(searchParam);
+        } else if (searchByDirector) {
+            whereClause.append("LOWER(d.name) LIKE ? ");
+            params.add(searchParam);
+        } else if (searchByTitle) {
+            whereClause.append("LOWER(f.name) LIKE ? ");
+            params.add(searchParam);
+        } else {
+            return new ArrayList<>();
+        }
+
+        String finalQuery = baseQuery + whereClause + "GROUP BY f.id ORDER BY COUNT(DISTINCT fl.users_id) DESC";
+        List<Film> films = jdbcTemplate.query(finalQuery, new FilmRowMapper(), params.toArray());
+
+        for (Film f : films) {
+            f.setGenres(loadGenres(f.getId()));
+            f.setLikes(loadLikes(f.getId()));
+            loadDirectors(f);
+        }
+
+        return films;
+    }
+
+    @Override
     public Film userLikesFilm(Long id, Long userId) {
         getFilmById(id);
         userDbStorage.getUserById(userId);
@@ -302,6 +350,13 @@ public class FilmDbStorage implements FilmStorage {
                 genreId, genreId, year, year,
                 limit
         );
+
+        for (Film film : films) {
+            film.setGenres(loadGenres(film.getId()));
+            film.setLikes(loadLikes(film.getId()));
+        }
+
+        return films;
     }
 
     private Set<Genre> loadGenres(Long filmId) {

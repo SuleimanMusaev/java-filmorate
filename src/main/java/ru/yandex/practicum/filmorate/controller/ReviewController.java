@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.dto.UpdateReviewRequest;
 import ru.yandex.practicum.filmorate.model.Review;
 import ru.yandex.practicum.filmorate.service.ReviewService;
 import java.util.List;
@@ -22,9 +23,22 @@ public class ReviewController {
     }
 
     @PutMapping
-    public Review updateReview(@Valid @RequestBody Review review) {
-        log.info("Обновление отзыва {}", review.getReviewId());
-        return reviewService.updateReview(review);
+    public Review updateReviewWithIdInBody(@Valid @RequestBody Review review) {
+        log.info("Обновление отзыва (ID в теле): {}", review);
+        // Проверяем, что отзыв существует
+        Review existingReview = reviewService.getReviewById(review.getReviewId());
+
+        // Создаем обновленный отзыв, сохраняя полезность из существующего
+        Review updatedReview = Review.builder()
+                .reviewId(review.getReviewId())
+                .content(review.getContent())
+                .isPositive(review.getIsPositive())
+                .userId(existingReview.getUserId())  // Берем из существующего
+                .filmId(existingReview.getFilmId())  // Берем из существующего
+                .useful(existingReview.getUseful())  // Берем из существующего
+                .build();
+
+        return reviewService.updateReview(updatedReview);
     }
 
     @DeleteMapping("/{id}")

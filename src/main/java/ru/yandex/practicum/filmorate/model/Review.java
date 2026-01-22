@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Review {
-    private Long id; // заменить reviewId на id
+    private Long reviewId;
 
     @NotNull
     private String content;
@@ -26,5 +26,5 @@ public class Review {
     private Long filmId;
 
     @Builder.Default
-    private Integer useful = 0; // Integer вместо int для null-safety
+    private Integer useful = 0;
 }

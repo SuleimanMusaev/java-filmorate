@@ -71,10 +71,14 @@ public class ReviewService {
     }
 
     public void addDislike(Long reviewId, Long userId) {
+        reviewStorage.getReviewById(reviewId);
+        userStorage.getUserById(userId);
         reviewStorage.addDislike(reviewId, userId);
     }
 
     public void deleteLike(Long reviewId, Long userId) {
+        reviewStorage.getReviewById(reviewId);
+        userStorage.getUserById(userId);
         reviewStorage.deleteLike(reviewId, userId);
     }
 

@@ -13,10 +13,10 @@ public class FilmMapper {
                 .name(filmDto.getName())
                 .description(filmDto.getDescription())
                 .releaseDate(filmDto.getReleaseDate())
-                .duration(filmDto.getDuration());
-        .mpa(filmDto.getMpa())
-                .genres(filmDto.getGenres());
-        .directors(filmDto.getDirectors())
+                .duration(filmDto.getDuration())
+                .mpa(filmDto.getMpa())
+                .genres(filmDto.getGenres())
+                .directors(filmDto.getDirectors())
                 .build();
 
     }
@@ -25,12 +25,12 @@ public class FilmMapper {
         return FilmDto.builder()
                 .id(film.getId())
                 .name(film.getName())
-                .description(filmDto.getDescription())
-                .releaseDate(filmDto.getReleaseDate())
-                .duration(filmDto.getDuration());
-        .mpa(filmDto.getMpa())
-                .genres(filmDto.getGenres());
-        .directors(filmDto.getDirectors())
+                .description(film.getDescription())
+                .releaseDate(film.getReleaseDate())
+                .duration(film.getDuration())
+                .mpa(film.getMpa())
+                .genres(film.getGenres())
+                .directors(film.getDirectors())
                 .build();
     }
 }

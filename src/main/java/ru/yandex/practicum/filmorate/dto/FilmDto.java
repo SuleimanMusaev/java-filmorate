@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Builder;
 import lombok.Data;
 import ru.yandex.practicum.filmorate.model.Director;
 import ru.yandex.practicum.filmorate.model.Genre;
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.Set;
 
 @Data
+@Builder
 public class FilmDto {
     Long id;
     String name;

@@ -2,6 +2,7 @@ package ru.yandex.practicum.filmorate.dao;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Primary;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -15,51 +16,40 @@ import ru.yandex.practicum.filmorate.storage.UserStorage;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @RequiredArgsConstructor
 @Repository
+@Primary
 @Qualifier("userDbStorage")
 public class UserDbStorage implements UserStorage {
-    private final JdbcTemplate jdbcTemplate;
-
     private static final String CREATE_QUERY = "INSERT INTO users (email,login,name,birthday) VALUES (?,?,?,?)";
-    private static final String UPDATE_QUERY =
-            "UPDATE users SET email = ?, login = ?, name = ?, birthday = ? WHERE id = ?";
+    private static final String UPDATE_QUERY = "UPDATE users SET email = ?, login = ?, name = ?, birthday = ? WHERE id = ?";
     private static final String GET_ID_QUERY = "SELECT * FROM users WHERE id = ?";
     private static final String GET_ALL_QUERY = "SELECT * FROM users";
+
     private static final String CREATE_FRIENDSHIP_QUERY =
             "INSERT INTO friends (senderUser_id, receiverUser_id, status) VALUES (?,?,?)";
-    private static final String FIND_RECEIVER_FRIENDSHIP_QUERY =
-            "SELECT senderUser_id FROM friends WHERE receiverUser_id = ?";
-    private static final String FIND_SENDER_FRIENDSHIP_QUERY =
-            "SELECT receiverUser_id FROM friends WHERE senderUser_id = ?";
+
     private static final String UPDATE_FRIENDSHIP_QUERY =
             "UPDATE friends SET status = ? WHERE senderUser_id =? AND receiverUser_id = ?";
-    private static final String NOT_CONFIRMED_FRIENDSHIP_QUERY =
-            "SELECT senderUser_id FROM friends WHERE receiverUser_id = ?";
-    private static final String CONFIRMED_FRIENDSHIP_QUERY =
-            "SELECT receiverUser_id FROM friends WHERE senderUser_id = ? AND status = 2";
+
+    private static final String GET_USER_FRIENDS_QUERY =
+            "SELECT receiverUser_id FROM friends WHERE senderUser_id = ? " +
+                    "UNION SELECT senderUser_id FROM friends WHERE receiverUser_id = ? AND status = 2";
+
     private static final String DELETE_FRIENDSHIP_QUERY =
-            "DELETE FROM friends WHERE (senderUser_id = ? AND receiverUser_id = ?) " +
-                    "OR(receiverUser_id = ? AND senderUser_id = ?)";
+            "DELETE FROM friends WHERE senderUser_id = ? AND receiverUser_id = ?";
+
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
     public User getUserById(Long id) {
         try {
             User user = jdbcTemplate.queryForObject(GET_ID_QUERY, new UserRowMapper(), id);
             if (user != null) {
-                // Добавляем друзей
-                List<Long> notConfirmedFriends = jdbcTemplate.queryForList(NOT_CONFIRMED_FRIENDSHIP_QUERY, Long.class, user.getId());
-                List<Long> confirmedFriends = jdbcTemplate.queryForList(CONFIRMED_FRIENDSHIP_QUERY, Long.class, user.getId());
-                Set<Long> allFriends = Stream.concat(notConfirmedFriends.stream(), confirmedFriends.stream())
-                        .collect(Collectors.toSet());
-                user.setFriends(allFriends);
+                user.setFriends(loadFriends(user.getId()));
             }
             return user;
         } catch (DataAccessException e) {
@@ -71,13 +61,13 @@ public class UserDbStorage implements UserStorage {
     public Collection<User> getAllUsers() {
         List<User> users = jdbcTemplate.query(GET_ALL_QUERY, new UserRowMapper());
         for (User user : users) {
-            List<Long> notConfirmedFriends = jdbcTemplate.queryForList(NOT_CONFIRMED_FRIENDSHIP_QUERY, Long.class, user.getId());
-            List<Long> confirmedFriends = jdbcTemplate.queryForList(CONFIRMED_FRIENDSHIP_QUERY, Long.class, user.getId());
-            Set<Long> allFriends = Stream.concat(notConfirmedFriends.stream(), confirmedFriends.stream())
-                    .collect(Collectors.toSet());
-            user.setFriends(allFriends);
+            user.setFriends(loadFriends(user.getId()));
         }
         return users;
+    }
+
+    private Set<Long> loadFriends(Long userId) {
+        return new HashSet<>(jdbcTemplate.queryForList(GET_USER_FRIENDS_QUERY, Long.class, userId, userId));
     }
 
     @Override
@@ -111,72 +101,64 @@ public class UserDbStorage implements UserStorage {
         } else throw new NotFoundException("Такого пользователя нет в списке!");
     }
 
-    public User createFriendship(long receiverUserId, long senderUserId) {
-        List<Long> receivedFriends = jdbcTemplate.queryForList(FIND_RECEIVER_FRIENDSHIP_QUERY, Long.class, senderUserId);
-        List<Long> senderFriends = jdbcTemplate.queryForList(FIND_SENDER_FRIENDSHIP_QUERY, Long.class, receiverUserId);
-        if (receivedFriends.contains(receiverUserId)) {
-            jdbcTemplate.update(connection -> {
-                PreparedStatement stmt = connection.prepareStatement(UPDATE_FRIENDSHIP_QUERY);
-                stmt.setInt(1, 2);
-                stmt.setLong(2, receiverUserId);
-                stmt.setLong(3, senderUserId);
-                return stmt;
-            });
-            return getUserById(senderUserId);
-        } else if (!receivedFriends.contains(receiverUserId) && !senderFriends.contains(senderUserId)) {
+    @Override
+    public User createFriendship(long user1Id, long user2Id) {
+        jdbcTemplate.update(CREATE_FRIENDSHIP_QUERY, user1Id, user2Id, 1);
+        return getUserById(user1Id);
+    }
 
-            jdbcTemplate.update(connection -> {
-                PreparedStatement stmt = connection.prepareStatement(CREATE_FRIENDSHIP_QUERY);
-                stmt.setLong(1, senderUserId);
-                stmt.setLong(2, receiverUserId);
-                stmt.setInt(3, 1);
-                return stmt;
-            });
-            return getUserById(senderUserId);
-        } else {
-            return getUserById(senderUserId);
-        }
+    @Override
+    public User deleteFriendship(long id, long friendId) {
+        jdbcTemplate.update(DELETE_FRIENDSHIP_QUERY, id, friendId);
+        return getUserById(id);
     }
 
     public Collection<User> listOfFriends(long id) {
-        List<Long> notConfirmedFriends = jdbcTemplate.queryForList(NOT_CONFIRMED_FRIENDSHIP_QUERY, Long.class, id);
-        List<Long> confirmedFriends = jdbcTemplate.queryForList(CONFIRMED_FRIENDSHIP_QUERY, Long.class, id);
-        Set<Long> friendsIds = Stream.concat(notConfirmedFriends.stream(), confirmedFriends.stream()).collect(Collectors.toSet());
-        return friendsIds.stream()
-                .map(ids -> getUserById(ids))
+        return loadFriends(id).stream()
+                .map(this::getUserById)
                 .collect(Collectors.toSet());
     }
 
     public Collection<User> listOfCommonFriends(Long id, Long otherId) {
-        Collection<User> commonFriends = listOfFriends(id);
-        commonFriends.retainAll(listOfFriends(otherId));
-        return commonFriends;
+        Collection<User> myFriends = listOfFriends(id);
+        Collection<User> otherFriends = listOfFriends(otherId);
+        return myFriends.stream()
+                .filter(otherFriends::contains)
+                .collect(Collectors.toList());
     }
 
-    public User deleteFriendship(long id, long friendId) {
-        List<Long> notConfirmedFriends = jdbcTemplate.queryForList(NOT_CONFIRMED_FRIENDSHIP_QUERY, Long.class, id);
-        List<Long> confirmedFriends = jdbcTemplate.queryForList(CONFIRMED_FRIENDSHIP_QUERY, Long.class, id);
-        if (confirmedFriends.contains(friendId)) { //Проверяем, что дружба взаимна
-            jdbcTemplate.update(connection -> {
-                PreparedStatement stmt = connection.prepareStatement(UPDATE_FRIENDSHIP_QUERY);
-                stmt.setInt(1, 1);
-                stmt.setLong(2, id);
-                stmt.setLong(3, friendId);
-                return stmt;
-            });
-        } else if (notConfirmedFriends.contains(friendId)) {
-            jdbcTemplate.update(DELETE_FRIENDSHIP_QUERY, id, friendId, id, friendId);
-        }
-        return getUserById(id);
+    @Override
+    public Optional<User> findById(Long id) {
+        List<User> users = jdbcTemplate.query(GET_ID_QUERY, new UserRowMapper(), id);
+        if (users.isEmpty()) return Optional.empty();
+        User user = users.get(0);
+        user.setFriends(loadFriends(id));
+        return Optional.of(user);
     }
 
     @Override
     public void deleteUser(Long userId) {
         String sql = "DELETE FROM users WHERE id = ?";
         int rowsDeleted = jdbcTemplate.update(sql, userId);
-
         if (rowsDeleted == 0) {
             throw new NotFoundException("Пользователь с ID " + userId + " не найден");
         }
+    }
+
+    @Override
+    public Collection<User> getFriends(Long id) {
+        String sql = "SELECT receiverUser_id FROM friends WHERE senderUser_id = ? " +
+                "UNION SELECT senderUser_id FROM friends WHERE receiverUser_id = ? AND status = 2";
+        List<Long> friendIds = jdbcTemplate.queryForList(sql, Long.class, id, id);
+        return friendIds.stream().map(this::getUserById).collect(Collectors.toList());
+    }
+
+    @Override
+    public Collection<User> getCommonFriends(Long id, Long otherId) {
+        Collection<User> myFriends = getFriends(id);
+        Collection<User> otherFriends = getFriends(otherId);
+        return myFriends.stream()
+                .filter(otherFriends::contains)
+                .collect(Collectors.toList());
     }
 }

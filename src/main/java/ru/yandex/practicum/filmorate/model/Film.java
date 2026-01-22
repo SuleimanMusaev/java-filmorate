@@ -41,7 +41,6 @@ public class Film {
 
     @Builder.Default
     private Set<Genre> genres = new HashSet<>();
-
     private Rating mpa;
 
     @Builder.Default

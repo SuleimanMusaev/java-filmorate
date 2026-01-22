@@ -61,6 +61,8 @@ public class FilmDbStorage implements FilmStorage {
             "INSERT INTO films_likes (films_id, users_id) VALUES (?, ?)";
     private static final String DELETE_FILM_LIKES_BY_ID_QUERY =
             "DELETE FROM films_likes WHERE films_id=? AND users_id=?";
+    private static final String DELETE_FILM_RATING_QUERY =
+            "DELETE FROM films_rating WHERE films_id = ?";
     private static final String GET_DIRECTORS_BY_FILM_QUERY =
             "SELECT d.id, d.name FROM director d " +
                     "JOIN film_director fd ON d.id = fd.director_id " +
@@ -137,6 +139,7 @@ public class FilmDbStorage implements FilmStorage {
             f.setLikes(loadLikes(f.getId()));
             loadDirectors(f);
         }
+
         return films;
     }
 

@@ -46,8 +46,8 @@ public class FilmService {
     }
 
     public Film userLikesFilm(Long id, Long userId) {
-        Film film = getFilmById(id); //Проверка на существование фильма
-        userStorage.getUserById(userId); //Проверка на существование юзера
+        Film film = getFilmById(id);//Проверка на существование фильма
+        userStorage.getUserById(userId);//Проверка на существование юзера
         return filmStorage.userLikesFilm(id, userId);
     }
 
@@ -142,6 +142,7 @@ public class FilmService {
     public List<Film> findFilmsByDirectorId(Long directorId, String sortBy) {
         // Проверяем существование режиссера
         directorStorage.findById(directorId);
+
         if (!"year".equals(sortBy) && !"likes".equals(sortBy)) {
             throw new ValidationException("Параметр sortBy должен быть 'year' или 'likes'");
         }

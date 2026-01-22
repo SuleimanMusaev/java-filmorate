@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.storage.EventStorage;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
@@ -15,6 +16,7 @@ import java.util.Collection;
 public class UserService {
     private final UserStorage userStorage;
     private final FilmStorage filmStorage;
+    private final EventStorage eventStorage;
 
     public Collection<User> getAllUsers() {
         return userStorage.getAllUsers();
@@ -45,6 +47,9 @@ public class UserService {
         userStorage.getUserById(id);
         userStorage.getUserById(friendId);
         userStorage.createFriendship(id, friendId);
+
+        eventStorage.addEvent(id, friendId, "FRIEND", "ADD");
+
         return userStorage.getUserById(id);
     }
 
@@ -52,6 +57,9 @@ public class UserService {
         userStorage.getUserById(id);
         userStorage.getUserById(friendId);
         userStorage.deleteFriendship(id, friendId);
+
+        eventStorage.addEvent(id, friendId, "FRIEND", "REMOVE");
+
         return userStorage.getUserById(id);
     }
 

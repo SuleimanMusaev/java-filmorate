@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Review;
-import ru.yandex.practicum.filmorate.storage.EventStorage;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.ReviewStorage;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
@@ -17,39 +16,23 @@ public class ReviewService {
     private final ReviewStorage reviewStorage;
     private final UserStorage userStorage;
     private final FilmStorage filmStorage;
-    private final EventStorage eventStorage;
 
     public Review addReview(Review review) {
         if (review.getUserId() == null || review.getFilmId() == null) {
             throw new NotFoundException("Id пользователя и фильма не должны быть null");
         }
-
         userStorage.getUserById(review.getUserId());
         filmStorage.getFilmById(review.getFilmId());
 
-        Review saved = reviewStorage.addReview(review);
-
-        eventStorage.addEvent(review.getUserId(), saved.getReviewId(), "REVIEW", "ADD");
-
-        return saved;
+        return reviewStorage.addReview(review);
     }
 
     public Review updateReview(Review review) {
-        Review updated = reviewStorage.updateReview(review);
-
-        eventStorage.addEvent(review.getUserId(), updated.getReviewId(), "REVIEW", "UPDATE");
-
-        return updated;
+        return reviewStorage.updateReview(review);
     }
 
     public void deleteReview(Long id) {
-        Review review = reviewStorage.getReviewById(id);
-
         reviewStorage.deleteReview(id);
-
-        eventStorage.addEvent(
-                review.getUserId(), id, "REVIEW", "REMOVE"
-        );
     }
 
     public Review getReviewById(Long id) {

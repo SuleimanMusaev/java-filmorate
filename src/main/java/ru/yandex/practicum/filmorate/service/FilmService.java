@@ -10,7 +10,6 @@ import ru.yandex.practicum.filmorate.model.Director;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.storage.DirectorStorage;
-import ru.yandex.practicum.filmorate.storage.EventStorage;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
@@ -25,20 +24,17 @@ public class FilmService {
     private final RatingDbStorage ratingDbStorage;
     private final GenreDbStorage genreDbStorage;
     private final DirectorStorage directorStorage;
-    private final EventStorage eventStorage;
 
     public FilmService(@Qualifier("filmDbStorage") FilmStorage filmStorage,
                        @Qualifier("userDbStorage") UserStorage userStorage,
                        @Qualifier("ratingDbStorage") RatingDbStorage ratingDbStorage,
                        @Qualifier("genreDbStorage") GenreDbStorage genreDbStorage,
-                       DirectorStorage directorStorage,
-                       EventStorage eventStorage) {
+                       DirectorStorage directorStorage) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
         this.ratingDbStorage = ratingDbStorage;
         this.genreDbStorage = genreDbStorage;
         this.directorStorage = directorStorage;
-        this.eventStorage = eventStorage;
     }
 
     public Film getFilmById(Long id) {
@@ -52,20 +48,11 @@ public class FilmService {
     public Film userLikesFilm(Long id, Long userId) {
         Film film = getFilmById(id);//Проверка на существование фильма
         userStorage.getUserById(userId);//Проверка на существование юзера
-
-        Film result = filmStorage.userLikesFilm(id, userId);
-
-        eventStorage.addEvent(userId, id, "LIKE", "ADD");
-
-        return result;
+        return filmStorage.userLikesFilm(id, userId);
     }
 
     public Film deleteLikesFilm(Long id, Long userId) {
-        Film result = filmStorage.deleteLikesFilm(id, userId);
-
-        eventStorage.addEvent(userId, id, "LIKE", "REMOVE");
-
-        return result;
+        return filmStorage.deleteLikesFilm(id, userId);
     }
 
     public Collection<Film> getCommonFilms(Long userId, Long friendId) {

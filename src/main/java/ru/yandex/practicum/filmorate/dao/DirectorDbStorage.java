@@ -31,12 +31,11 @@ public class DirectorDbStorage implements DirectorStorage {
     private static final String GET_BY_FILM_ID_QUERY =
             "SELECT d.id, d.name FROM director d " +
                     "JOIN film_director fd ON d.id = fd.director_id " +
-                    "WHERE fd.film_id = ? ORDER BY d.name";
+                    "WHERE fd.films_id = ? ORDER BY d.name";
 
     @Override
     public Director save(Director director) {
         if (director.getId() == null) {
-            // Создание нового режиссера
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbcTemplate.update(connection -> {
                 PreparedStatement stmt = connection.prepareStatement(CREATE_QUERY, Statement.RETURN_GENERATED_KEYS);
@@ -46,11 +45,7 @@ public class DirectorDbStorage implements DirectorStorage {
             director.setId(Objects.requireNonNull(keyHolder.getKey()).longValue());
             return director;
         } else {
-            // Обновление существующего режиссера
-            int updated = jdbcTemplate.update(UPDATE_QUERY,
-                    director.getName(),
-                    director.getId());
-
+            int updated = jdbcTemplate.update(UPDATE_QUERY, director.getName(), director.getId());
             if (updated == 0) {
                 throw new NotFoundException("Режиссер с id=" + director.getId() + " не найден");
             }
@@ -74,16 +69,10 @@ public class DirectorDbStorage implements DirectorStorage {
 
     @Override
     public void deleteById(long id) {
-        // Сначала проверяем существование
         findById(id);
-
-        // Удаляем связи в film_director
         String deleteLinksSql = "DELETE FROM film_director WHERE director_id = ?";
         jdbcTemplate.update(deleteLinksSql, id);
-
-        // Удаляем самого режиссера
         int deleted = jdbcTemplate.update(DELETE_QUERY, id);
-
         if (deleted == 0) {
             throw new NotFoundException("Режиссер с id=" + id + " не найден");
         }

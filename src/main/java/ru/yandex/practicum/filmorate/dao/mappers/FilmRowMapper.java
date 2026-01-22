@@ -18,7 +18,7 @@ public class FilmRowMapper implements RowMapper<Film> {
         film.setName(rs.getString("name"));
         film.setDescription(rs.getString("description"));
 
-        Date rd = rs.getDate("release_date");
+        Date rd = rs.getDate("releaseDate");
         if (rd != null) {
             film.setReleaseDate(rd.toLocalDate());
         }
@@ -27,12 +27,10 @@ public class FilmRowMapper implements RowMapper<Film> {
 
         Long ratingId = rs.getLong("rating_id");
         String ratingName = rs.getString("rating_name");
-
         if (ratingId != 0) {
             Rating rating = new Rating(ratingId, ratingName);
             film.setMpa(rating);
         }
         return film;
     }
-
 }

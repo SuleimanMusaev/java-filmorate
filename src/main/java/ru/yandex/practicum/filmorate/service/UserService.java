@@ -1,95 +1,80 @@
 package ru.yandex.practicum.filmorate.service;
 
-import org.springframework.beans.factory.annotation.Qualifier;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
-import java.time.LocalDate;
 import java.util.Collection;
 
 @Service
+@RequiredArgsConstructor
 public class UserService {
     private final UserStorage userStorage;
     private final FilmStorage filmStorage;
-
-    public UserService(@Qualifier("userDbStorage") UserStorage userStorage,
-                       @Qualifier("filmDbStorage") FilmStorage filmStorage) {
-        this.userStorage = userStorage;
-        this.filmStorage = filmStorage;
-    }
-
-    public User getUserById(Long id) {
-        User user = userStorage.getUserById(id);
-        if (user == null) {
-            throw new NotFoundException("Такого юзера нет в списке!");
-        }
-        return user;
-    }
-
-    public User makeFriendship(long id, long friendId) {
-        getUserById(id);
-        getUserById(friendId);
-        return userStorage.createFriendship(id, friendId);
-    }
-
-    public User deleteFriendship(long id, long friendId) {
-        getUserById(id);
-        getUserById(friendId);
-        return userStorage.deleteFriendship(id, friendId);
-    }
-
-    public Collection<User> listOfFriends(long id) {
-        getUserById(id);
-        return userStorage.listOfFriends(id);
-    }
-
-    public Collection<User> listOfCommonFriends(Long id, Long otherId) {
-        getUserById(id);
-        getUserById(otherId);
-        return userStorage.listOfCommonFriends(id, otherId);
-    }
 
     public Collection<User> getAllUsers() {
         return userStorage.getAllUsers();
     }
 
-    public Collection<Film> getRecommendations(Long userId) {
-        userStorage.getUserById(userId);
-        return filmStorage.getRecommendations(userId);
-    }
-
     public User createUser(User user) {
-        validateUser(user);
         return userStorage.createUser(user);
     }
 
     public User updateUser(User user) {
-        validateUser(user);
         return userStorage.updateUser(user);
     }
 
-    private void validateUser(User user) {
-
-        if (user.getEmail() == null || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
-            throw new ValidationException("Invalid email");
-        }
-
-        if (user.getLogin() == null || user.getLogin().isBlank() || user.getLogin().contains(" ")) {
-            throw new ValidationException("Invalid login");
-        }
-
-        if (user.getBirthday() != null && user.getBirthday().isAfter(LocalDate.now())) {
-            throw new ValidationException("Birthday cannot be in the future");
-        }
+    public User getUserById(Long id) {
+        return userStorage.getUserById(id);
     }
 
     public User findById(Long id) {
         return userStorage.findById(id)
-                .orElseThrow(() -> new NotFoundException("Пользователь с id=" + id + " не найден"));
+                .orElseThrow(() -> new NotFoundException("Пользователь с id " + id + " не найден"));
+    }
+
+    public void deleteUser(Long id) {
+        userStorage.deleteUser(id);
+    }
+
+    public User makeFriendship(Long id, Long friendId) {
+        User user = userStorage.getUserById(id);
+        User friend = userStorage.getUserById(friendId);
+        if (user == null || friend == null) {
+            throw new NotFoundException("Пользователь не найден");
+        }
+        userStorage.createFriendship(id, friendId);
+        return userStorage.getUserById(id);
+    }
+
+    public User deleteFriendship(Long id, Long friendId) {
+        // Сначала проверяем, существуют ли пользователи, чтобы вернуть 404, если кого-то нет
+        userStorage.getUserById(id);
+        userStorage.getUserById(friendId);
+
+        userStorage.deleteFriendship(id, friendId);
+        return userStorage.getUserById(id);
+    }
+
+    public Collection<User> listOfFriends(Long id) {
+        // Проверяем существование пользователя перед запросом списка
+        userStorage.getUserById(id);
+        return userStorage.getFriends(id);
+    }
+
+    public Collection<User> listOfCommonFriends(Long id, Long otherId) {
+        // Проверяем существование обоих пользователей
+        userStorage.getUserById(id);
+        userStorage.getUserById(otherId);
+
+        return userStorage.getCommonFriends(id, otherId);
+    }
+
+    public Collection<Film> getRecommendations(Long userId) {
+        return filmStorage.getRecommendations(userId);
     }
 }

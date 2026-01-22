@@ -1,6 +1,6 @@
 package ru.yandex.practicum.filmorate.model;
 
-import jakarta.validation.constraints.NotBlank;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,23 +9,23 @@ import lombok.NoArgsConstructor;
 
 @Data
 @Builder
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
 public class Review {
     private Long reviewId;
 
-    @NotBlank(message = "Текст отзыва не может быть пустым")
+    @NotNull
     private String content;
 
-    @NotNull(message = "Тип отзыва (положительный/отрицательный) должен быть указан")
+    @NotNull
+    @JsonProperty("isPositive")
     private Boolean isPositive;
 
-    @NotNull(message = "ID пользователя обязателен")
+    @NotNull
     private Long userId;
 
-    @NotNull(message = "ID фильма обязателен")
+    @NotNull
     private Long filmId;
 
-    @Builder.Default
-    private int useful = 0;
+    private int useful;
 }

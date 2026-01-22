@@ -15,7 +15,6 @@ import java.util.List;
 @RequestMapping("/films")
 public class FilmController {
     private final FilmService filmService;
-    private final FilmMapper filmMapper;
 
     @GetMapping
     public Collection<Film> getAllFilms() {

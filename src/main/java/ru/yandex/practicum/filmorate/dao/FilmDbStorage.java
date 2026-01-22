@@ -20,7 +20,6 @@ import ru.yandex.practicum.filmorate.model.Director;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
-import ru.yandex.practicum.filmorate.dao.mappers.FilmRowMapper;
 
 import java.sql.Date;
 import java.sql.PreparedStatement;
@@ -343,11 +342,13 @@ public class FilmDbStorage implements FilmStorage {
     @Override
     public Collection<Film> getPopularFilms(Integer count, Long genreId, Integer year) {
 
-        int limit = count != null ? count : 10;
-        return jdbcTemplate.query(
+        int limit = (count != null) ? count : 10;
+
+        List<Film> films = jdbcTemplate.query(
                 POPULAR_FILMS_QUERY,
-                new FilmSimpleRowMapper(),
-                genreId, genreId, year, year,
+                new FilmRowMapper(),
+                genreId, genreId,
+                year, year,
                 limit
         );
 

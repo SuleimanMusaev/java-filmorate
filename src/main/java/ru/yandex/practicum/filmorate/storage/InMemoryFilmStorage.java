@@ -1,23 +1,28 @@
 package ru.yandex.practicum.filmorate.storage;
 
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.model.Director;
 import ru.yandex.practicum.filmorate.model.Film;
 
 import java.time.LocalDate;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Component("inMemoryFilmStorage")
-@RequiredArgsConstructor
 public class InMemoryFilmStorage implements FilmStorage {
-    private static final Logger log = LoggerFactory.getLogger(InMemoryFilmStorage.class);
-    UserStorage userStorage;
-
+    private final UserStorage userStorage;
     private final Map<Long, Film> films = new HashMap<>();
+
+    public InMemoryFilmStorage(@Qualifier("userInMemoryStorage") UserStorage userStorage) {
+        this.userStorage = userStorage;
+    }
+
+    private static final Logger log = LoggerFactory.getLogger(InMemoryFilmStorage.class);
 
     @Override
     public Film getFilmById(Long id) {
@@ -77,6 +82,61 @@ public class InMemoryFilmStorage implements FilmStorage {
         }
         film.getLikes().remove(userId);
         return film;
+    }
+
+    @Override
+    public Collection<Film> getCommonFilms(Long userId, Long friendId) {
+        List<Film> result = films.values().stream()
+                .filter(f -> f.getLikes().contains(userId) && f.getLikes().contains(friendId))
+                .sorted((a, b) -> Integer.compare(b.getLikes().size(), a.getLikes().size()))
+                .toList();
+        return result;
+    }
+
+    @Override
+    public Collection<Film> getRecommendations(Long userId) {
+        Set<Long> userLikes = films.values().stream()
+                .filter(f -> f.getLikes().contains(userId))
+                .map(Film::getId)
+                .collect(java.util.stream.Collectors.toSet());
+
+        if (userLikes.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, Integer> commonCounts = new HashMap<>();
+        for (Film film : films.values()) {
+            if (!userLikes.contains(film.getId())) {
+                continue;
+            }
+            for (Long liker : film.getLikes()) {
+                if (liker.equals(userId)) {
+                    continue;
+                }
+                commonCounts.merge(liker, 1, Integer::sum);
+            }
+        }
+
+        Optional<Map.Entry<Long, Integer>> best = commonCounts.entrySet().stream()
+                .max(Map.Entry.comparingByValue());
+
+        if (best.isEmpty()) {
+            return List.of();
+        }
+
+        Long similarUserId = best.get().getKey();
+
+        List<Film> result = films.values().stream()
+                .filter(f -> f.getLikes().contains(similarUserId) && !f.getLikes().contains(userId))
+                .sorted((a, b) -> Integer.compare(b.getLikes().size(), a.getLikes().size()))
+                .toList();
+
+        return result;
+    }
+
+    @Override
+    public Collection<Film> getPopularFilms(Integer count, Long genreId, Integer year) {
+        return List.of();
     }
 
     private Long getNextId() {

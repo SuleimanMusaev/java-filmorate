@@ -8,6 +8,7 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import ru.yandex.practicum.filmorate.dao.FilmDbStorage;
+import ru.yandex.practicum.filmorate.dao.RatingDbStorage;
 import ru.yandex.practicum.filmorate.dao.UserDbStorage;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Rating;
@@ -25,12 +26,18 @@ public class FilmDaoTests {
     @Autowired
     JdbcTemplate jdbc;
     FilmDbStorage filmDbStorage;
+    RatingDbStorage ratingDbStorage;
     UserDbStorage userDbStorage;
+
     Film film;
 
     @BeforeEach
     void setUp() {
-        filmDbStorage = new FilmDbStorage(jdbc, userDbStorage);
+        ratingDbStorage = new RatingDbStorage(jdbc);
+        userDbStorage = new UserDbStorage(jdbc);
+
+        filmDbStorage = new FilmDbStorage(jdbc, userDbStorage, ratingDbStorage);
+
         film = new Film();
         film.setId(1L);
         film.setName("example");
@@ -78,15 +85,15 @@ public class FilmDaoTests {
     @Test
     public void testGetAllFilms() {
         Film film2 = new Film();
-        film2.setId(1L);
         film2.setName("example");
         film2.setDescription("example_description");
         film2.setReleaseDate(LocalDate.now().minusYears(10));
         film2.setDuration(150);
         film2.setLikes(new HashSet<>());
         film2.setGenres(new HashSet<>());
+
         Rating rating = new Rating(1L, "G");
-        film.setMpa(rating);
+        film2.setMpa(rating);
 
         filmDbStorage.createFilm(film);
         filmDbStorage.createFilm(film2);

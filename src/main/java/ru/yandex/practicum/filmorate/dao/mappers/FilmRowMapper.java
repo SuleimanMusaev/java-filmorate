@@ -32,7 +32,7 @@ public class FilmRowMapper implements RowMapper<Film> {
             Rating rating = new Rating(ratingId, ratingName);
             film.setMpa(rating);
         }
-
         return film;
     }
+
 }

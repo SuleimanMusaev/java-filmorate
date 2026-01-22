@@ -1,14 +1,18 @@
--- Заполнение рейтингов MPA
-INSERT INTO rating (name) VALUES ('G');
-INSERT INTO rating (name) VALUES ('PG');
-INSERT INTO rating (name) VALUES ('PG-13');
-INSERT INTO rating (name) VALUES ('R');
-INSERT INTO rating (name) VALUES ('NC-17');
+-- Рейтинги (MPA)
+MERGE INTO rating (id, name) VALUES (1, 'G');
+MERGE INTO rating (id, name) VALUES (2, 'PG');
+MERGE INTO rating (id, name) VALUES (3, 'PG-13');
+MERGE INTO rating (id, name) VALUES (4, 'R');
+MERGE INTO rating (id, name) VALUES (5, 'NC-17');
 
--- Заполнение жанров
-INSERT INTO genre (name) VALUES ('Комедия');
-INSERT INTO genre (name) VALUES ('Драма');
-INSERT INTO genre (name) VALUES ('Мультфильм');
-INSERT INTO genre (name) VALUES ('Триллер');
-INSERT INTO genre (name) VALUES ('Документальный');
-INSERT INTO genre (name) VALUES ('Боевик');
+-- Жанры
+MERGE INTO genre (id, name) VALUES (1, 'Комедия');
+MERGE INTO genre (id, name) VALUES (2, 'Драма');
+MERGE INTO genre (id, name) VALUES (3, 'Мультфильм');
+MERGE INTO genre (id, name) VALUES (4, 'Триллер');
+MERGE INTO genre (id, name) VALUES (5, 'Документальный');
+MERGE INTO genre (id, name) VALUES (6, 'Боевик');
+
+-- Статусы дружбы
+MERGE INTO friends_status (id, name) VALUES (1, 'UNCONFIRMED');
+MERGE INTO friends_status (id, name) VALUES (2, 'CONFIRMED');

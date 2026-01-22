@@ -8,12 +8,14 @@ import ru.yandex.practicum.filmorate.dto.mappers.FilmMapper;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.FilmService;
 import java.util.Collection;
+import java.util.List;
 
 @RestController
 @AllArgsConstructor
 @RequestMapping("/films")
 public class FilmController {
     private final FilmService filmService;
+    private final FilmMapper filmMapper;
 
     @GetMapping
     public Collection<Film> getAllFilms() {
@@ -48,7 +50,35 @@ public class FilmController {
     }
 
     @GetMapping("/popular")
-    public Collection<Film> listFirstCountFilm(@RequestParam(defaultValue = "10") int count) {
-        return filmService.listFirstCountFilm(count);
+    public Collection<Film> getPopularFilms(
+            @RequestParam(defaultValue = "10") Integer count,
+            @RequestParam(required = false) Long genreId,
+            @RequestParam(required = false) Integer year
+    ) {
+        return filmService.getPopularFilms(count, genreId, year);
+    }
+
+    @DeleteMapping("/{filmId}")
+    public void deleteFilm(@PathVariable Long filmId) {
+        filmService.deleteFilm(filmId);
+    }
+
+    @GetMapping("/director/{directorId}")
+    public List<Film> getFilmsByDirector(
+            @PathVariable Long directorId,
+            @RequestParam(defaultValue = "year") String sortBy) {
+        return filmService.findFilmsByDirectorId(directorId, sortBy);
+    }
+
+    @GetMapping("/common")
+    public Collection<Film> getCommonFilms(@RequestParam Long userId, @RequestParam Long friendId) {
+        return filmService.getCommonFilms(userId, friendId);
+    }
+
+    @GetMapping("/search")
+    public Collection<Film> searchFilms(
+            @RequestParam String query,
+            @RequestParam String by) {
+        return filmService.searchFilms(query, by);
     }
 }

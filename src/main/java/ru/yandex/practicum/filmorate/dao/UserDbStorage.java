@@ -6,7 +6,6 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.dao.mappers.UserRowMapper;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
@@ -21,7 +20,6 @@ import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Repository
-@Component("userDbStorage")
 @Qualifier("userDbStorage")
 public class UserDbStorage implements UserStorage {
     private static final String CREATE_QUERY = "INSERT INTO users (email,login,name,birthday) VALUES (?,?,?,?)";
@@ -155,5 +153,15 @@ public class UserDbStorage implements UserStorage {
         User user = users.get(0);
         user.setFriends(loadFriends(id));
         return Optional.of(user);
+    }
+
+    @Override
+    public void deleteUser(Long userId) {
+        String sql = "DELETE FROM users WHERE id = ?";
+        int rowsDeleted = jdbcTemplate.update(sql, userId);
+
+        if (rowsDeleted == 0) {
+            throw new NotFoundException("Пользователь с ID " + userId + " не найден");
+        }
     }
 }

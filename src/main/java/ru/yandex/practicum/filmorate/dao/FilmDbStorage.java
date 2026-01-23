@@ -15,7 +15,6 @@ import ru.yandex.practicum.filmorate.dao.mappers.DirectorRowMapper;
 import ru.yandex.practicum.filmorate.dao.mappers.FilmRowMapper;
 import ru.yandex.practicum.filmorate.dao.mappers.GenreRowMapper;
 import ru.yandex.practicum.filmorate.exception.DatabaseException;
-import ru.yandex.practicum.filmorate.exception.DuplicateException;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Director;

@@ -43,7 +43,6 @@ public class UserService {
         userStorage.getUserById(id);
         userStorage.getUserById(friendId);
         userStorage.createFriendship(id, friendId);
-
         eventStorage.addEvent(id, friendId, "FRIEND", "ADD");
 
         return userStorage.getUserById(id);

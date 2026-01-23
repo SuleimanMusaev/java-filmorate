@@ -20,18 +20,18 @@ public class DirectorController {
     }
 
     @GetMapping("/{id}")
-    public Director getById( @PathVariable long id) {
+    public Director getById(@PathVariable long id) {
         return directorService.findById(id);
     }
 
     @PostMapping
-    public Director create(@Valid @RequestBody Director director) { // Убрали @Valid
-        return directorService.save(director);
+    public Director create(@RequestBody Director director) {
+        return directorService.create(director);
     }
 
     @PutMapping
     public Director update(@Valid @RequestBody Director director) { // Убрали @Valid
-        return directorService.save(director);
+        return directorService.update(director);
     }
 
     @DeleteMapping("/{id}")

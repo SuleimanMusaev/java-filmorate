@@ -22,10 +22,12 @@ public class UserService {
     }
 
     public User createUser(User user) {
+        normalizeUserName(user);
         return userStorage.createUser(user);
     }
 
     public User updateUser(User user) {
+        normalizeUserName(user);
         return userStorage.updateUser(user);
     }
 
@@ -71,5 +73,11 @@ public class UserService {
 
     public Collection<Film> getRecommendations(Long userId) {
         return filmStorage.getRecommendations(userId);
+    }
+
+    private void normalizeUserName(User user) {
+        if (user.getName() == null || user.getName().isBlank()) {
+            user.setName(user.getLogin());
+        }
     }
 }

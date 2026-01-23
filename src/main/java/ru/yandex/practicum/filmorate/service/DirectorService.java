@@ -17,6 +17,21 @@ public class DirectorService {
         return directorStorage.findById(id);
     }
 
+    public Director create(Director director) {
+        validateDirector(director);
+        director.setId(null);
+        return directorStorage.save(director);
+    }
+
+    public Director update(Director director) {
+        validateDirector(director);
+        if (director.getId() == null) {
+            throw new ValidationException("ID режиссера обязателен для обновления");
+        }
+        findById(director.getId());
+        return directorStorage.save(director);
+    }
+
     public List<Director> findAll() {
         return directorStorage.findAll();
     }

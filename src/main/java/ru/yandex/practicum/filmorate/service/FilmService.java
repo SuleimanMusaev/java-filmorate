@@ -110,15 +110,15 @@ public class FilmService {
         }
 
         if (film.getDescription() != null && film.getDescription().length() > 200) {
-            throw new ValidationException("Description too long");
+            throw new ValidationException("Описание слишком длинноеg");
         }
 
         if (film.getDuration() <= 0) {
-            throw new ValidationException("Duration must be positive");
+            throw new ValidationException("Продолжительность должна быть положительной");
         }
 
         if (film.getMpa() == null || film.getMpa().getId() == null) {
-            throw new ValidationException("MPA is missing");
+            throw new ValidationException("MPA отсутствует");
         }
 
         ratingStorage.getRatingById(film.getMpa().getId());

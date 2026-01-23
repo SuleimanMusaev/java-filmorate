@@ -18,7 +18,6 @@ public class FilmService {
     private final UserStorage userStorage;
     private final RatingStorage ratingStorage;
     private final GenreStorage genreStorage;
-    ;
     private final DirectorStorage directorStorage;
     private final EventStorage eventStorage;
 

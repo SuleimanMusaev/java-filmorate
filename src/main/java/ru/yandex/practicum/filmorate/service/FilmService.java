@@ -2,17 +2,12 @@ package ru.yandex.practicum.filmorate.service;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
-import ru.yandex.practicum.filmorate.dao.GenreDbStorage;
-import ru.yandex.practicum.filmorate.dao.RatingDbStorage;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Director;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
-import ru.yandex.practicum.filmorate.storage.DirectorStorage;
-import ru.yandex.practicum.filmorate.storage.EventStorage;
-import ru.yandex.practicum.filmorate.storage.FilmStorage;
-import ru.yandex.practicum.filmorate.storage.UserStorage;
+import ru.yandex.practicum.filmorate.storage.*;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -22,36 +17,33 @@ import java.util.List;
 public class FilmService {
     private final FilmStorage filmStorage;
     private final UserStorage userStorage;
-    private final RatingDbStorage ratingDbStorage;
-    private final GenreDbStorage genreDbStorage;
+    private final RatingStorage ratingStorage;
+    private final GenreStorage genreStorage;
+    ;
     private final DirectorStorage directorStorage;
     private final EventStorage eventStorage;
 
     public FilmService(@Qualifier("filmDbStorage") FilmStorage filmStorage,
                        @Qualifier("userDbStorage") UserStorage userStorage,
-                       @Qualifier("ratingDbStorage") RatingDbStorage ratingDbStorage,
-                       @Qualifier("genreDbStorage") GenreDbStorage genreDbStorage,
+                       @Qualifier("ratingStorage") RatingStorage ratingStorage,
+                       @Qualifier("genreStorage") GenreStorage genreStorage,
                        DirectorStorage directorStorage,
                        EventStorage eventStorage) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
-        this.ratingDbStorage = ratingDbStorage;
-        this.genreDbStorage = genreDbStorage;
+        this.ratingStorage = ratingStorage;
+        this.genreStorage = genreStorage;
         this.directorStorage = directorStorage;
         this.eventStorage = eventStorage;
     }
 
     public Film getFilmById(Long id) {
-        Film film = filmStorage.getFilmById(id);
-        if (film == null) {
-            throw new NotFoundException("Такого фильма нет в списке!");
-        }
-        return film;
+        return filmStorage.getFilmById(id);
     }
 
     public Film userLikesFilm(Long id, Long userId) {
-        Film film = getFilmById(id);//Проверка на существование фильма
-        userStorage.getUserById(userId);//Проверка на существование юзера
+        Film film = getFilmById(id);
+        userStorage.getUserById(userId);
 
         Film result = filmStorage.userLikesFilm(id, userId);
 
@@ -105,17 +97,6 @@ public class FilmService {
 
     public Film createFilm(Film film) {
         validateFilm(film);
-        ratingDbStorage.getRatingById(film.getMpa().getId());
-        if (film.getGenres() != null) {
-            for (Genre g : film.getGenres()) {
-                genreDbStorage.getGenreById(g.getId());
-            }
-        }
-        if (film.getDirectors() != null) {
-            for (Director d : film.getDirectors()) {
-                directorStorage.findById(d.getId());
-            }
-        }
         return filmStorage.createFilm(film);
     }
 
@@ -140,6 +121,15 @@ public class FilmService {
         if (film.getMpa() == null || film.getMpa().getId() == null) {
             throw new ValidationException("MPA is missing");
         }
+
+        ratingStorage.getRatingById(film.getMpa().getId());
+
+        if (film.getGenres() != null) {
+            for (Genre g : film.getGenres()) {
+                genreStorage.getGenreById(g.getId());
+            }
+        }
+
         if (film.getDirectors() != null) {
             for (Director d : film.getDirectors()) {
                 directorStorage.findById(d.getId());
@@ -153,7 +143,6 @@ public class FilmService {
     }
 
     public List<Film> findFilmsByDirectorId(Long directorId, String sortBy) {
-        // Проверяем существование режиссера
         directorStorage.findById(directorId);
 
         if (!"year".equals(sortBy) && !"likes".equals(sortBy)) {

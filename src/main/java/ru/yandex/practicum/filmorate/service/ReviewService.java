@@ -83,6 +83,8 @@ public class ReviewService {
     }
 
     public void deleteDislike(Long reviewId, Long userId) {
+        reviewStorage.getReviewById(reviewId);
+        userStorage.getUserById(userId);
         reviewStorage.deleteDislike(reviewId, userId);
     }
 }

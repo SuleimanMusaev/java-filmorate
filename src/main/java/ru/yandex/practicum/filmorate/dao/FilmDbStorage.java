@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.dao;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Primary;
 import org.springframework.dao.DataAccessException;
@@ -29,6 +30,7 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Repository
 @RequiredArgsConstructor
 @Primary
@@ -267,11 +269,13 @@ public class FilmDbStorage implements FilmStorage {
     public Film userLikesFilm(Long id, Long userId) {
         getFilmById(id);
         userDbStorage.getUserById(userId);
+
         try {
             jdbcTemplate.update(INSERT_FILM_LIKES_QUERY, id, userId);
         } catch (DataAccessException e) {
-            throw new DuplicateException("Лайк уже стоит");
+            log.debug("Like already exists for film={}, user={}. Returning film.", id, userId);
         }
+
         return getFilmById(id);
     }
 
@@ -312,6 +316,7 @@ public class FilmDbStorage implements FilmStorage {
         for (Film f : films) {
             f.setGenres(loadGenres(f.getId()));
             f.setLikes(loadLikes(f.getId()));
+            loadDirectors(f);
         }
         return films;
     }
@@ -329,6 +334,7 @@ public class FilmDbStorage implements FilmStorage {
         for (Film film : films) {
             film.setGenres(loadGenres(film.getId()));
             film.setLikes(loadLikes(film.getId()));
+            loadDirectors(film);
         }
         return films;
     }

@@ -1,5 +1,6 @@
 package ru.yandex.practicum.filmorate.controller;
 
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.Genre;
@@ -24,7 +25,7 @@ public class GenreController {
     }
 
     @PostMapping
-    public Genre createGenre(@RequestBody Genre genre) {
+    public Genre createGenre(@Valid @RequestBody Genre genre) {
         return genreService.createGenre(genre);
     }
 }

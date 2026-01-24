@@ -52,7 +52,11 @@ public class ReviewDbStorage implements ReviewStorage {
     @Override
     public Review updateReview(Review review) {
         String sql = "UPDATE reviews SET content = ?, is_positive = ? WHERE review_id = ?";
-        int updated = jdbcTemplate.update(sql, review.getContent(), review.getIsPositive(), review.getReviewId());
+        int updated = jdbcTemplate.update(sql,
+                review.getContent(),
+                review.getIsPositive(),
+                review.getReviewId());
+
         if (updated == 0) {
             throw new NotFoundException("Отзыв не найден");
         }

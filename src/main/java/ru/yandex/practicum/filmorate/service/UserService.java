@@ -2,7 +2,6 @@ package ru.yandex.practicum.filmorate.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.EventStorage;
@@ -23,10 +22,12 @@ public class UserService {
     }
 
     public User createUser(User user) {
+        normalizeUserName(user);
         return userStorage.createUser(user);
     }
 
     public User updateUser(User user) {
+        normalizeUserName(user);
         return userStorage.updateUser(user);
     }
 
@@ -34,33 +35,22 @@ public class UserService {
         return userStorage.getUserById(id);
     }
 
-    public User findById(Long id) {
-        return userStorage.findById(id)
-                .orElseThrow(() -> new NotFoundException("Пользователь с id " + id + " не найден"));
-    }
-
     public void deleteUser(Long id) {
         userStorage.deleteUser(id);
     }
 
     public User makeFriendship(Long id, Long friendId) {
-        User user = userStorage.getUserById(id);
-        User friend = userStorage.getUserById(friendId);
-        if (user == null || friend == null) {
-            throw new NotFoundException("Пользователь не найден");
-        }
+        userStorage.getUserById(id);
+        userStorage.getUserById(friendId);
         userStorage.createFriendship(id, friendId);
-
         eventStorage.addEvent(id, friendId, "FRIEND", "ADD");
 
         return userStorage.getUserById(id);
     }
 
     public User deleteFriendship(Long id, Long friendId) {
-        // Сначала проверяем, существуют ли пользователи, чтобы вернуть 404, если кого-то нет
         userStorage.getUserById(id);
         userStorage.getUserById(friendId);
-
         userStorage.deleteFriendship(id, friendId);
 
         eventStorage.addEvent(id, friendId, "FRIEND", "REMOVE");
@@ -69,13 +59,11 @@ public class UserService {
     }
 
     public Collection<User> listOfFriends(Long id) {
-        // Проверяем существование пользователя перед запросом списка
         userStorage.getUserById(id);
         return userStorage.getFriends(id);
     }
 
     public Collection<User> listOfCommonFriends(Long id, Long otherId) {
-        // Проверяем существование обоих пользователей
         userStorage.getUserById(id);
         userStorage.getUserById(otherId);
 
@@ -84,5 +72,11 @@ public class UserService {
 
     public Collection<Film> getRecommendations(Long userId) {
         return filmStorage.getRecommendations(userId);
+    }
+
+    private void normalizeUserName(User user) {
+        if (user.getName() == null || user.getName().isBlank()) {
+            user.setName(user.getLogin());
+        }
     }
 }

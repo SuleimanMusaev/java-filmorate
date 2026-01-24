@@ -2,6 +2,7 @@ package ru.yandex.practicum.filmorate.controller;
 
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.dto.UserDto;
 import ru.yandex.practicum.filmorate.dto.mappers.UserMapper;
@@ -16,6 +17,7 @@ import java.util.Collection;
 @RequestMapping("/users")
 public class UserController {
     private final UserService userService;
+    private final UserMapper userMapper;
 
     @GetMapping
     public Collection<User> getAllUsers() {
@@ -28,14 +30,15 @@ public class UserController {
     }
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public User createUser(@Valid @RequestBody UserDto userDto) {
-        User user = UserMapper.mapToUser(userDto);
+        User user = userMapper.mapToUser(userDto);
         return userService.createUser(user);
     }
 
     @PutMapping
     public User updateUser(@Valid @RequestBody UserDto userDto) {
-        User user = UserMapper.mapToUser(userDto);
+        User user = userMapper.mapToUser(userDto);
         return userService.updateUser(user);
     }
 

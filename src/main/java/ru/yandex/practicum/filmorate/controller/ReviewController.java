@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.Review;
 import ru.yandex.practicum.filmorate.service.ReviewService;
+
 import java.util.List;
 
 @RestController
@@ -17,14 +18,27 @@ public class ReviewController {
 
     @PostMapping
     public Review addReview(@Valid @RequestBody Review review) {
-        log.info("Добавление отзыва пользователем {} на фильм {}", review.getUserId(), review.getFilmId());
+        log.info("Добавление отзыва: {}", review);
         return reviewService.addReview(review);
     }
 
     @PutMapping
-    public Review updateReview(@Valid @RequestBody Review review) {
-        log.info("Обновление отзыва {}", review.getReviewId());
-        return reviewService.updateReview(review);
+    public Review updateReviewWithIdInBody(@Valid @RequestBody Review review) {
+        log.info("Обновление отзыва (ID в теле): {}", review);
+        // Проверяем, что отзыв существует
+        Review existingReview = reviewService.getReviewById(review.getReviewId());
+
+        // Создаем обновленный отзыв, сохраняя полезность из существующего
+        Review updatedReview = Review.builder()
+                .reviewId(review.getReviewId())
+                .content(review.getContent())
+                .isPositive(review.getIsPositive())
+                .userId(existingReview.getUserId())  // Берем из существующего
+                .filmId(existingReview.getFilmId())  // Берем из существующего
+                .useful(existingReview.getUseful())  // Берем из существующего
+                .build();
+
+        return reviewService.updateReview(updatedReview);
     }
 
     @DeleteMapping("/{id}")

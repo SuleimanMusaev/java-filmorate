@@ -19,7 +19,7 @@ import java.util.Objects;
 
 @Repository
 @RequiredArgsConstructor
-@Qualifier("genreDbStorage")
+@Qualifier("genreStorage")
 public class GenreDbStorage implements GenreStorage {
     private final JdbcTemplate jdbcTemplate;
 

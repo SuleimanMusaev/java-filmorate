@@ -65,18 +65,26 @@ public class ReviewService {
     }
 
     public void addLike(Long reviewId, Long userId) {
+        reviewStorage.getReviewById(reviewId);
+        userStorage.getUserById(userId);
         reviewStorage.addLike(reviewId, userId);
     }
 
     public void addDislike(Long reviewId, Long userId) {
+        reviewStorage.getReviewById(reviewId);
+        userStorage.getUserById(userId);
         reviewStorage.addDislike(reviewId, userId);
     }
 
     public void deleteLike(Long reviewId, Long userId) {
+        reviewStorage.getReviewById(reviewId);
+        userStorage.getUserById(userId);
         reviewStorage.deleteLike(reviewId, userId);
     }
 
     public void deleteDislike(Long reviewId, Long userId) {
+        reviewStorage.getReviewById(reviewId);
+        userStorage.getUserById(userId);
         reviewStorage.deleteDislike(reviewId, userId);
     }
 }

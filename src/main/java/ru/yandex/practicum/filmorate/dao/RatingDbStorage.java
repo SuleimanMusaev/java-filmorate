@@ -14,7 +14,7 @@ import java.util.Collection;
 
 @Repository
 @RequiredArgsConstructor
-@Qualifier("ratingDbStorage")
+@Qualifier("ratingStorage")
 public class RatingDbStorage implements RatingStorage {
     private final JdbcTemplate jdbc;
     private static final String GET_ID_QUERY = "SELECT * FROM rating WHERE id = ?";

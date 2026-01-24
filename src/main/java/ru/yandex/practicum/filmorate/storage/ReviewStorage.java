@@ -21,7 +21,7 @@ public interface ReviewStorage {
 
     void addDislike(Long reviewId, Long userId);
 
-    void deleteLike(Long reviewId, Long userId); // Удаляет и лайк, и дизлайк
+    void deleteLike(Long reviewId, Long userId);
 
     void deleteDislike(Long reviewId, Long userId);
 }

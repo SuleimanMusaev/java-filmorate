@@ -35,9 +35,24 @@ public class ReviewService {
     }
 
     public Review updateReview(Review review) {
-        Review updated = reviewStorage.updateReview(review);
+        if (review.getReviewId() == null) {
+            throw new NotFoundException("Id отзыва не должен быть null");
+        }
 
-        eventStorage.addEvent(review.getUserId(), updated.getReviewId(), "REVIEW", "UPDATE");
+        Review existing = reviewStorage.getReviewById(review.getReviewId());
+
+        Review toUpdate = Review.builder()
+                .reviewId(existing.getReviewId())
+                .content(review.getContent())
+                .isPositive(review.getIsPositive())
+                .userId(existing.getUserId())
+                .filmId(existing.getFilmId())
+                .useful(existing.getUseful())
+                .build();
+
+        Review updated = reviewStorage.updateReview(toUpdate);
+
+        eventStorage.addEvent(existing.getUserId(), updated.getReviewId(), "REVIEW", "UPDATE");
 
         return updated;
     }

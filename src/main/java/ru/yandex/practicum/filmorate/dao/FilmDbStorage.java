@@ -113,6 +113,19 @@ public class FilmDbStorage implements FilmStorage {
                     "WHERE fl_user.users_id IS NULL " +
                     "GROUP BY f.id, f.name, f.description, f.releaseDate, f.duration, r.id, r.name " +
                     "ORDER BY like_count DESC";
+
+    private static final String SEARCH_FILMS_BASE_QUERY = "SELECT f.*, r.id AS rating_id, r.name AS rating_name " +
+            "FROM films f " +
+            "LEFT JOIN films_rating fr ON f.id = fr.films_id " +
+            "LEFT JOIN rating r ON fr.rating_id = r.id " +
+            "LEFT JOIN film_director fd ON f.id = fd.films_id " +
+            "LEFT JOIN director d ON fd.director_id = d.id " +
+            "LEFT JOIN films_likes fl ON f.id = fl.films_id ";
+
+    private static final String LOAD_GENRES_QUERY = "SELECT g.id, g.name FROM genre g " +
+            "JOIN films_genre fg ON g.id = fg.genre_id " +
+            "WHERE fg.films_id = ? " +
+            "ORDER BY g.id";
     private final JdbcTemplate jdbcTemplate;
     private final UserDbStorage userDbStorage;
     private final RatingDbStorage ratingDbStorage;
@@ -167,10 +180,8 @@ public class FilmDbStorage implements FilmStorage {
 
         film.setId(Objects.requireNonNull(keyHolder.getKey()).longValue());
 
-        // Сохраняем рейтинг в отдельную таблицу
         jdbcTemplate.update(INSERT_FILM_RATINGS_QUERY, film.getId(), film.getMpa().getId());
 
-        // Сохраняем жанры
         if (film.getGenres() != null && !film.getGenres().isEmpty()) {
             List<Object[]> batch = film.getGenres().stream()
                     .map(g -> {
@@ -199,13 +210,11 @@ public class FilmDbStorage implements FilmStorage {
                 film.getDuration(),
                 film.getId());
 
-        // Обновляем рейтинг (удаляем старый, добавляем новый)
         jdbcTemplate.update(DELETE_FILM_RATINGS_QUERY, film.getId());
         if (film.getMpa() != null && film.getMpa().getId() != null) {
             jdbcTemplate.update(INSERT_FILM_RATINGS_QUERY, film.getId(), film.getMpa().getId());
         }
 
-        // Обновляем жанры
         jdbcTemplate.update(DELETE_FILM_GENRES_QUERY, film.getId());
         if (film.getGenres() != null && !film.getGenres().isEmpty()) {
             List<Object[]> batch = film.getGenres().stream()
@@ -214,7 +223,6 @@ public class FilmDbStorage implements FilmStorage {
             jdbcTemplate.batchUpdate(INSERT_FILM_GENRES_QUERY, batch);
         }
 
-        // Обновляем режиссеров
         deleteFilmDirectors(film.getId());
         if (film.getDirectors() != null && !film.getDirectors().isEmpty()) {
             saveFilmDirectors(film.getId(), film.getDirectors());
@@ -225,13 +233,7 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Collection<Film> searchFilms(String query, String by) {
-        String baseQuery = "SELECT f.*, r.id AS rating_id, r.name AS rating_name " +
-                "FROM films f " +
-                "LEFT JOIN films_rating fr ON f.id = fr.films_id " +
-                "LEFT JOIN rating r ON fr.rating_id = r.id " +
-                "LEFT JOIN film_director fd ON f.id = fd.films_id " +
-                "LEFT JOIN director d ON fd.director_id = d.id " +
-                "LEFT JOIN films_likes fl ON f.id = fl.films_id ";
+        String baseQuery = SEARCH_FILMS_BASE_QUERY;
 
         StringBuilder whereClause = new StringBuilder("WHERE ");
         List<Object> params = new ArrayList<>();
@@ -272,7 +274,8 @@ public class FilmDbStorage implements FilmStorage {
         try {
             jdbcTemplate.update(INSERT_FILM_LIKES_QUERY, id, userId);
         } catch (DataAccessException e) {
-            log.debug("Like already exists for film={}, user={}. Returning film.", id, userId);
+            log.warn("Like already exists for filmId={}, userId={}. Film will be returned.", id, userId);
+            log.debug("Duplicate like details:", e);
         }
 
         return getFilmById(id);
@@ -322,7 +325,7 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Collection<Film> getPopularFilms(Integer count, Long genreId, Integer year) {
-        int limit = (count != null) ? count : 10;
+        int limit = count;
         List<Film> films = jdbcTemplate.query(
                 POPULAR_FILMS_QUERY,
                 new FilmRowMapper(),
@@ -339,10 +342,7 @@ public class FilmDbStorage implements FilmStorage {
     }
 
     private Set<Genre> loadGenres(Long filmId) {
-        String sql = "SELECT g.id, g.name FROM genre g " +
-                "JOIN films_genre fg ON g.id = fg.genre_id WHERE fg.films_id = ?";
-        List<Genre> genres = jdbcTemplate.query(sql, new GenreRowMapper(), filmId);
-        genres.sort(Comparator.comparing(Genre::getId));
+        List<Genre> genres = jdbcTemplate.query(LOAD_GENRES_QUERY, new GenreRowMapper(), filmId);
         return new LinkedHashSet<>(genres);
     }
 

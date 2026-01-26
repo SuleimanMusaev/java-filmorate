@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.dao;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -20,10 +21,10 @@ import java.util.Objects;
 @Repository
 @Qualifier("reviewDbStorage")
 @RequiredArgsConstructor
+@Slf4j
 public class ReviewDbStorage implements ReviewStorage {
     private final JdbcTemplate jdbcTemplate;
 
-    // Считаем useful как сумму (лайк=+1, дизлайк=-1)
     private static final String SELECT_REVIEWS =
             "SELECT r.review_id, r.content, r.is_positive, r.user_id, r.film_id, " +
                     "COALESCE(SUM(CASE WHEN rl.is_like = true THEN 1 WHEN rl.is_like = false THEN -1 ELSE 0 END), 0) as useful " +
@@ -58,7 +59,8 @@ public class ReviewDbStorage implements ReviewStorage {
                 review.getReviewId());
 
         if (updated == 0) {
-            throw new NotFoundException("Отзыв не найден");
+            log.warn("Review not found for update, reviewId={}", review.getReviewId());
+            throw new NotFoundException("Отзыв с id=" + review.getReviewId() + " не найден");
         }
         return getReviewById(review.getReviewId());
     }
@@ -67,7 +69,10 @@ public class ReviewDbStorage implements ReviewStorage {
     public void deleteReview(Long id) {
         String sql = "DELETE FROM reviews WHERE review_id = ?";
         int deleted = jdbcTemplate.update(sql, id);
-        if (deleted == 0) throw new NotFoundException("Отзыв не найден");
+        if (deleted == 0) {
+            log.warn("Review not found for delete, reviewId={}", id);
+            throw new NotFoundException("Отзыв с id=" + id + " не найден");
+        }
     }
 
     @Override
@@ -94,7 +99,6 @@ public class ReviewDbStorage implements ReviewStorage {
 
     @Override
     public void addLike(Long reviewId, Long userId) {
-        // Удаляем старую реакцию если была, вставляем новую
         String sql = "MERGE INTO review_likes (review_id, user_id, is_like) KEY(review_id, user_id) VALUES (?, ?, true)";
         jdbcTemplate.update(sql, reviewId, userId);
     }

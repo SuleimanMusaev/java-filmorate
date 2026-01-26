@@ -26,19 +26,7 @@ public class ReviewController {
     public Review updateReviewWithIdInBody(@Valid @RequestBody Review review) {
         log.info("Обновление отзыва (ID в теле): {}", review);
         // Проверяем, что отзыв существует
-        Review existingReview = reviewService.getReviewById(review.getReviewId());
-
-        // Создаем обновленный отзыв, сохраняя полезность из существующего
-        Review updatedReview = Review.builder()
-                .reviewId(review.getReviewId())
-                .content(review.getContent())
-                .isPositive(review.getIsPositive())
-                .userId(existingReview.getUserId())  // Берем из существующего
-                .filmId(existingReview.getFilmId())  // Берем из существующего
-                .useful(existingReview.getUseful())  // Берем из существующего
-                .build();
-
-        return reviewService.updateReview(updatedReview);
+        return reviewService.updateReview(review);
     }
 
     @DeleteMapping("/{id}")

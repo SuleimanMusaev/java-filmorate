@@ -19,7 +19,6 @@ public class EventDbStorage implements EventStorage {
     private static final String INSERT_EVENT =
             "INSERT INTO events (user_id, entity_id, event_type, operation, timestamp) " +
                     "VALUES (?, ?, ?, ?, ?)";
-
     private static final String GET_FEED =
             "SELECT * FROM events WHERE user_id = ? ORDER BY timestamp ASC";
 

@@ -35,11 +35,20 @@ public class ReviewService {
     }
 
     public Review updateReview(Review review) {
-        Review updated = reviewStorage.updateReview(review);
+        Review existingReview = reviewStorage.getReviewById(review.getReviewId());
 
-        eventStorage.addEvent(review.getUserId(), updated.getReviewId(), "REVIEW", "UPDATE");
+        Review updatedReview = Review.builder()
+                .reviewId(existingReview.getReviewId())
+                .content(review.getContent())   // Новое значение
+                .isPositive(review.getIsPositive()) // Новое значение
+                .userId(existingReview.getUserId())  // Старое значение
+                .filmId(existingReview.getFilmId())  // Старое значение
+                .useful(existingReview.getUseful())  // Старое значение
+                .build();
 
-        return updated;
+        Review savedReview = reviewStorage.updateReview(updatedReview);
+        eventStorage.addEvent(savedReview.getUserId(), savedReview.getReviewId(), "REVIEW", "UPDATE");
+        return savedReview;
     }
 
     public void deleteReview(Long id) {

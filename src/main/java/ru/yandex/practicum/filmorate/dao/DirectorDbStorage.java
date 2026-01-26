@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.dao;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -17,6 +18,7 @@ import java.sql.Statement;
 import java.util.List;
 import java.util.Objects;
 
+@Slf4j
 @Repository
 @RequiredArgsConstructor
 @Qualifier("directorDbStorage")
@@ -32,6 +34,7 @@ public class DirectorDbStorage implements DirectorStorage {
             "SELECT d.id, d.name FROM director d " +
                     "JOIN film_director fd ON d.id = fd.director_id " +
                     "WHERE fd.films_id = ? ORDER BY d.name";
+    private static final String DELETE_DIRECTOR_BY_ID = "DELETE FROM film_director WHERE director_id = ?";
 
     @Override
     public Director save(Director director) {
@@ -44,22 +47,16 @@ public class DirectorDbStorage implements DirectorStorage {
             }, keyHolder);
             director.setId(Objects.requireNonNull(keyHolder.getKey()).longValue());
             return director;
-        } else {
-            int updated = jdbcTemplate.update(UPDATE_QUERY, director.getName(), director.getId());
-            if (updated == 0) {
-                throw new NotFoundException("Режиссер с id=" + director.getId() + " не найден");
-            }
-            return director;
         }
+
+        validateDirectorExists(director.getId());
+        jdbcTemplate.update(UPDATE_QUERY, director.getName(), director.getId());
+        return director;
     }
 
     @Override
     public Director findById(long id) {
-        try {
-            return jdbcTemplate.queryForObject(GET_BY_ID_QUERY, new DirectorRowMapper(), id);
-        } catch (DataAccessException e) {
-            throw new NotFoundException("Режиссер с id=" + id + " не найден");
-        }
+        return validateDirectorExists(id);
     }
 
     @Override
@@ -69,15 +66,22 @@ public class DirectorDbStorage implements DirectorStorage {
 
     @Override
     public void deleteById(long id) {
-        findById(id);
-        String deleteLinksSql = "DELETE FROM film_director WHERE director_id = ?";
-        jdbcTemplate.update(deleteLinksSql, id);
-        int deleted = jdbcTemplate.update(DELETE_QUERY, id);
-
+        validateDirectorExists(id);
+        jdbcTemplate.update(DELETE_DIRECTOR_BY_ID, id);
+        jdbcTemplate.update(DELETE_QUERY, id);
     }
 
     @Override
     public List<Director> findDirectorsByFilmId(long filmId) {
         return jdbcTemplate.query(GET_BY_FILM_ID_QUERY, new DirectorRowMapper(), filmId);
+    }
+
+    private Director validateDirectorExists(long id) {
+        try {
+            return jdbcTemplate.queryForObject(GET_BY_ID_QUERY, new DirectorRowMapper(), id);
+        } catch (DataAccessException e) {
+            log.error("Режиссер с id={} не найден", id);
+            throw new NotFoundException("Режиссер с id=" + id + " не найден");
+        }
     }
 }

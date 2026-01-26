@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.dao;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -12,6 +13,7 @@ import ru.yandex.practicum.filmorate.storage.RatingStorage;
 
 import java.util.Collection;
 
+@Slf4j
 @Repository
 @RequiredArgsConstructor
 @Qualifier("ratingStorage")
@@ -25,6 +27,7 @@ public class RatingDbStorage implements RatingStorage {
         try {
             return jdbc.queryForObject(GET_ID_QUERY, new RatingRowMapper(), id);
         } catch (DataAccessException e) {
+            log.warn("Такого рейтинга нет!");
             throw new NotFoundException("Такого рейтинга нет! " + e.getMessage());
         }
     }

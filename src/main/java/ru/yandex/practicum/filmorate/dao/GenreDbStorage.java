@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.dao;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -17,6 +18,7 @@ import java.sql.Statement;
 import java.util.Collection;
 import java.util.Objects;
 
+@Slf4j
 @Repository
 @RequiredArgsConstructor
 @Qualifier("genreStorage")
@@ -44,6 +46,7 @@ public class GenreDbStorage implements GenreStorage {
         try {
             return jdbcTemplate.queryForObject(GET_ID_QUERY, new GenreRowMapper(), id);
         } catch (DataAccessException e) {
+            log.warn("Такого жанра нет!");
             throw new NotFoundException("Такого жанра нет! " + e.getMessage());
         }
     }

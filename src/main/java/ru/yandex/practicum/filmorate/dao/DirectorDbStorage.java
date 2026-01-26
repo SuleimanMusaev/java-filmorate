@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.dao;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -72,8 +73,7 @@ public class DirectorDbStorage implements DirectorStorage {
         findById(id);
         String deleteLinksSql = "DELETE FROM film_director WHERE director_id = ?";
         jdbcTemplate.update(deleteLinksSql, id);
-        int deleted = jdbcTemplate.update(DELETE_QUERY, id);
-
+        jdbcTemplate.update(DELETE_QUERY, id);
     }
 
     @Override

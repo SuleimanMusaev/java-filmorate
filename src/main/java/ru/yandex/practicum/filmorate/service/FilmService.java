@@ -2,13 +2,13 @@ package ru.yandex.practicum.filmorate.service;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Director;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.storage.*;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -39,20 +39,31 @@ public class FilmService {
         return filmStorage.getFilmById(id);
     }
 
+    @Transactional
     public Film userLikesFilm(Long id, Long userId) {
-        Film film = getFilmById(id);
+        Film film = filmStorage.getFilmById(id);
         userStorage.getUserById(userId);
 
-        Film result = filmStorage.userLikesFilm(id, userId);
+        if (film.getLikes() != null && film.getLikes().contains(userId)) {
+            return film;
+        }
 
+        Film updatedFilm = filmStorage.userLikesFilm(id, userId);
         eventStorage.addEvent(userId, id, "LIKE", "ADD");
 
-        return result;
+        return updatedFilm;
     }
 
+    @Transactional
     public Film deleteLikesFilm(Long id, Long userId) {
-        Film result = filmStorage.deleteLikesFilm(id, userId);
+        Film film = filmStorage.getFilmById(id);
+        userStorage.getUserById(userId);
 
+        if (film.getLikes() == null || !film.getLikes().contains(userId)) {
+            throw new ru.yandex.practicum.filmorate.exception.NotFoundException("Лайк не найден");
+        }
+
+        Film result = filmStorage.deleteLikesFilm(id, userId);
         eventStorage.addEvent(userId, id, "LIKE", "REMOVE");
 
         return result;
@@ -66,14 +77,6 @@ public class FilmService {
 
     public Collection<Film> getPopularFilms(Integer count, Long genreId, Integer year) {
         return filmStorage.getPopularFilms(count, genreId, year);
-    }
-
-    public List<Film> sortingToDown() {
-        ArrayList<Film> listFilms = new ArrayList<>(filmStorage.getAllFilms());
-        listFilms.sort((Film film1, Film film2) ->
-                Integer.compare(film2.getLikes().size(), film1.getLikes().size())
-        );
-        return listFilms;
     }
 
     public Collection<Film> searchFilms(String query, String by) {
@@ -109,7 +112,7 @@ public class FilmService {
         }
 
         if (film.getDescription() != null && film.getDescription().length() > 200) {
-            throw new ValidationException("Описание слишком длинноеg");
+            throw new ValidationException("Описание слишком длинное");
         }
 
         if (film.getDuration() <= 0) {
@@ -142,7 +145,6 @@ public class FilmService {
 
     public List<Film> findFilmsByDirectorId(Long directorId, String sortBy) {
         directorStorage.findById(directorId);
-
         if (!"year".equals(sortBy) && !"likes".equals(sortBy)) {
             throw new ValidationException("Параметр sortBy должен быть 'year' или 'likes'");
         }

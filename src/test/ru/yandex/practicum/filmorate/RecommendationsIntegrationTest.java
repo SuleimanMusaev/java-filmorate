@@ -47,9 +47,13 @@ class RecommendationsIntegrationTest {
         jdbcTemplate.update("DELETE FROM films_likes");
         jdbcTemplate.update("DELETE FROM films_genre");
         jdbcTemplate.update("DELETE FROM films_rating");
+        jdbcTemplate.update("DELETE FROM film_director");
         jdbcTemplate.update("DELETE FROM friends");
         jdbcTemplate.update("DELETE FROM films");
         jdbcTemplate.update("DELETE FROM users");
+
+        jdbcTemplate.update("ALTER TABLE users ALTER COLUMN id RESTART WITH 1");
+        jdbcTemplate.update("ALTER TABLE films ALTER COLUMN id RESTART WITH 1");
     }
 
     @Test

@@ -2,6 +2,7 @@ package ru.yandex.practicum.filmorate.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.EventStorage;
@@ -39,31 +40,42 @@ public class UserService {
         userStorage.deleteUser(id);
     }
 
+    @Transactional
     public User makeFriendship(Long id, Long friendId) {
-        userStorage.getUserById(id);
+        User user = userStorage.getUserById(id);
         userStorage.getUserById(friendId);
-        userStorage.createFriendship(id, friendId);
+
+        if (user.getFriends() != null && user.getFriends().contains(friendId)) {
+            return user;
+        }
+
+        User updatedUser = userStorage.createFriendship(id, friendId);
         eventStorage.addEvent(id, friendId, "FRIEND", "ADD");
 
-        return userStorage.getUserById(id);
+        return updatedUser;
     }
 
+    @Transactional
     public User deleteFriendship(Long id, Long friendId) {
-        userStorage.getUserById(id);
+        User user = userStorage.getUserById(id);
         userStorage.getUserById(friendId);
-        userStorage.deleteFriendship(id, friendId);
 
+        if (user.getFriends() == null || !user.getFriends().contains(friendId)) {
+            throw new ru.yandex.practicum.filmorate.exception.NotFoundException("Дружба не найдена");
+        }
+
+        User result = userStorage.deleteFriendship(id, friendId);
         eventStorage.addEvent(id, friendId, "FRIEND", "REMOVE");
 
-        return userStorage.getUserById(id);
+        return result;
     }
 
-    public Collection<User> listOfFriends(Long id) {
+    public Collection<User> getFriends(Long id) {
         userStorage.getUserById(id);
         return userStorage.getFriends(id);
     }
 
-    public Collection<User> listOfCommonFriends(Long id, Long otherId) {
+    public Collection<User> getCommonFriends(Long id, Long otherId) {
         userStorage.getUserById(id);
         userStorage.getUserById(otherId);
 

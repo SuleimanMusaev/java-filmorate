@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.dao;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -21,7 +22,7 @@ public class EventDbStorage implements EventStorage {
                     "VALUES (?, ?, ?, ?, ?)";
 
     private static final String GET_FEED =
-            "SELECT * FROM events WHERE user_id = ? ORDER BY timestamp ASC";
+            "SELECT * FROM events WHERE user_id = ? ORDER BY timestamp ASC, event_id ASC";
 
     @Override
     public void addEvent(Long userId, Long entityId, String eventType, String operation) {

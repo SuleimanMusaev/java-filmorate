@@ -23,32 +23,19 @@ public class ReviewController {
     }
 
     @PutMapping
-    public Review updateReviewWithIdInBody(@Valid @RequestBody Review review) {
+    public Review updateReview(@RequestBody Review review) {
         log.info("Обновление отзыва (ID в теле): {}", review);
-        // Проверяем, что отзыв существует
-        Review existingReview = reviewService.getReviewById(review.getReviewId());
-
-        // Создаем обновленный отзыв, сохраняя полезность из существующего
-        Review updatedReview = Review.builder()
-                .reviewId(review.getReviewId())
-                .content(review.getContent())
-                .isPositive(review.getIsPositive())
-                .userId(existingReview.getUserId())  // Берем из существующего
-                .filmId(existingReview.getFilmId())  // Берем из существующего
-                .useful(existingReview.getUseful())  // Берем из существующего
-                .build();
-
-        return reviewService.updateReview(updatedReview);
+        return reviewService.updateReview(review);
     }
 
     @DeleteMapping("/{id}")
-    public void deleteReview(@PathVariable Long id) {
+    public void deleteReview(@Valid @PathVariable Long id) {
         log.info("Удаление отзыва {}", id);
         reviewService.deleteReview(id);
     }
 
     @GetMapping("/{id}")
-    public Review getReviewById(@PathVariable Long id) {
+    public Review getReviewById(@Valid @PathVariable Long id) {
         return reviewService.getReviewById(id);
     }
 

@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @JdbcTest
 @AutoConfigureTestDatabase
 @RequiredArgsConstructor
+@Transactional
 public class UserDaoTests {
     @Autowired
     JdbcTemplate jdbc;

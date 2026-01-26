@@ -30,7 +30,7 @@ public class DirectorController {
     }
 
     @PutMapping
-    public Director update(@Valid @RequestBody Director director) { // Убрали @Valid
+    public Director update(@Valid @RequestBody Director director) {
         return directorService.update(director);
     }
 

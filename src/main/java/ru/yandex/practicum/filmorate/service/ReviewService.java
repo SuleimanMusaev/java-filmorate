@@ -2,6 +2,7 @@ package ru.yandex.practicum.filmorate.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Review;
 import ru.yandex.practicum.filmorate.storage.EventStorage;
@@ -19,6 +20,7 @@ public class ReviewService {
     private final FilmStorage filmStorage;
     private final EventStorage eventStorage;
 
+    @Transactional
     public Review addReview(Review review) {
         if (review.getUserId() == null || review.getFilmId() == null) {
             throw new NotFoundException("Id пользователя и фильма не должны быть null");
@@ -28,28 +30,25 @@ public class ReviewService {
         filmStorage.getFilmById(review.getFilmId());
 
         Review saved = reviewStorage.addReview(review);
-
-        eventStorage.addEvent(review.getUserId(), saved.getReviewId(), "REVIEW", "ADD");
+        eventStorage.addEvent(saved.getUserId(), saved.getReviewId(), "REVIEW", "ADD");
 
         return saved;
     }
 
+    @Transactional
     public Review updateReview(Review review) {
+        Review oldReview = reviewStorage.getReviewById(review.getReviewId());
         Review updated = reviewStorage.updateReview(review);
-
-        eventStorage.addEvent(review.getUserId(), updated.getReviewId(), "REVIEW", "UPDATE");
+        eventStorage.addEvent(oldReview.getUserId(), updated.getReviewId(), "REVIEW", "UPDATE");
 
         return updated;
     }
 
+    @Transactional
     public void deleteReview(Long id) {
         Review review = reviewStorage.getReviewById(id);
-
         reviewStorage.deleteReview(id);
-
-        eventStorage.addEvent(
-                review.getUserId(), id, "REVIEW", "REMOVE"
-        );
+        eventStorage.addEvent(review.getUserId(), id, "REVIEW", "REMOVE");
     }
 
     public Review getReviewById(Long id) {

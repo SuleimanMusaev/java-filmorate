@@ -32,15 +32,27 @@ public class UserDbStorage implements UserStorage {
     private static final String CREATE_FRIENDSHIP_QUERY =
             "INSERT INTO friends (senderUser_id, receiverUser_id, status) VALUES (?,?,?)";
 
-    private static final String UPDATE_FRIENDSHIP_QUERY =
-            "UPDATE friends SET status = ? WHERE senderUser_id =? AND receiverUser_id = ?";
+    private static final String DELETE_FRIENDSHIP_QUERY =
+            "DELETE FROM friends WHERE senderUser_id = ? AND receiverUser_id = ?";
+
+    private static final int CONFIRMED_FRIENDSHIP_STATUS = 2; // статус дружбы подтверждён
 
     private static final String GET_USER_FRIENDS_QUERY =
             "SELECT receiverUser_id FROM friends WHERE senderUser_id = ? " +
-                    "UNION SELECT senderUser_id FROM friends WHERE receiverUser_id = ? AND status = 2";
+                    "UNION SELECT senderUser_id FROM friends WHERE receiverUser_id = ? AND status = " + CONFIRMED_FRIENDSHIP_STATUS;
 
-    private static final String DELETE_FRIENDSHIP_QUERY =
-            "DELETE FROM friends WHERE senderUser_id = ? AND receiverUser_id = ?";
+    private static final String GET_COMMON_FRIENDS_QUERY =
+            "SELECT u.* FROM users u " +
+                    "WHERE u.id IN (" +
+                    "    SELECT receiverUser_id FROM friends WHERE senderUser_id = ? " +
+                    "    UNION " +
+                    "    SELECT senderUser_id FROM friends WHERE receiverUser_id = ? AND status = " + CONFIRMED_FRIENDSHIP_STATUS +
+                    ") " +
+                    "AND u.id IN (" +
+                    "    SELECT receiverUser_id FROM friends WHERE senderUser_id = ? " +
+                    "    UNION " +
+                    "    SELECT senderUser_id FROM friends WHERE receiverUser_id = ? AND status = " + CONFIRMED_FRIENDSHIP_STATUS +
+                    ")";
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -60,14 +72,33 @@ public class UserDbStorage implements UserStorage {
     @Override
     public Collection<User> getAllUsers() {
         List<User> users = jdbcTemplate.query(GET_ALL_QUERY, new UserRowMapper());
-        for (User user : users) {
-            user.setFriends(loadFriends(user.getId()));
-        }
+        loadFriendsForUsers(users);
+
         return users;
     }
 
     private Set<Long> loadFriends(Long userId) {
         return new HashSet<>(jdbcTemplate.queryForList(GET_USER_FRIENDS_QUERY, Long.class, userId, userId));
+    }
+
+    private void loadFriendsForUsers(List<User> users) {
+        if (users.isEmpty()) return;
+        String sql = "SELECT senderUser_id, receiverUser_id FROM friends WHERE senderUser_id IN (" +
+                users.stream().map(u -> "?").collect(Collectors.joining(",")) + ")";
+
+        Object[] args = users.stream().map(User::getId).toArray();
+
+        Map<Long, Set<Long>> friendsMap = new HashMap<>();
+
+        jdbcTemplate.query(sql, rs -> {
+            long userId = rs.getLong("senderUser_id");
+            long friendId = rs.getLong("receiverUser_id");
+            friendsMap.computeIfAbsent(userId, k -> new HashSet<>()).add(friendId);
+        }, args);
+
+        for (User user : users) {
+            user.setFriends(friendsMap.getOrDefault(user.getId(), new HashSet<>()));
+        }
     }
 
     @Override
@@ -109,22 +140,11 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public User deleteFriendship(long id, long friendId) {
-        jdbcTemplate.update(DELETE_FRIENDSHIP_QUERY, id, friendId);
+        int rows = jdbcTemplate.update(DELETE_FRIENDSHIP_QUERY, id, friendId);
+        if (rows == 0) {
+            throw new NotFoundException("Дружба не найдена");
+        }
         return getUserById(id);
-    }
-
-    public Collection<User> listOfFriends(long id) {
-        return loadFriends(id).stream()
-                .map(this::getUserById)
-                .collect(Collectors.toSet());
-    }
-
-    public Collection<User> listOfCommonFriends(Long id, Long otherId) {
-        Collection<User> myFriends = listOfFriends(id);
-        Collection<User> otherFriends = listOfFriends(otherId);
-        return myFriends.stream()
-                .filter(otherFriends::contains)
-                .collect(Collectors.toList());
     }
 
     @Override
@@ -147,18 +167,16 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public Collection<User> getFriends(Long id) {
-        String sql = "SELECT receiverUser_id FROM friends WHERE senderUser_id = ? " +
-                "UNION SELECT senderUser_id FROM friends WHERE receiverUser_id = ? AND status = 2";
-        List<Long> friendIds = jdbcTemplate.queryForList(sql, Long.class, id, id);
+        List<Long> friendIds = jdbcTemplate.queryForList(GET_USER_FRIENDS_QUERY, Long.class, id, id);
         return friendIds.stream().map(this::getUserById).collect(Collectors.toList());
     }
 
     @Override
     public Collection<User> getCommonFriends(Long id, Long otherId) {
-        Collection<User> myFriends = getFriends(id);
-        Collection<User> otherFriends = getFriends(otherId);
-        return myFriends.stream()
-                .filter(otherFriends::contains)
-                .collect(Collectors.toList());
+        return jdbcTemplate.query(
+                GET_COMMON_FRIENDS_QUERY,
+                new UserRowMapper(),
+                id, id, otherId, otherId
+        );
     }
 }

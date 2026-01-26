@@ -44,10 +44,6 @@ public class FilmService {
         Film film = filmStorage.getFilmById(id);
         userStorage.getUserById(userId);
 
-        if (film.getLikes() != null && film.getLikes().contains(userId)) {
-            return film;
-        }
-
         Film updatedFilm = filmStorage.userLikesFilm(id, userId);
         eventStorage.addEvent(userId, id, "LIKE", "ADD");
 

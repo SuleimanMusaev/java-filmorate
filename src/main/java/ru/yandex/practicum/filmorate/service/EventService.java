@@ -14,7 +14,7 @@ public class EventService {
     private final EventStorage eventStorage;
     private final UserStorage userStorage; // ✅ Интерфейс вместо конкретного UserDbStorage
 
-    void addEvent(Long userId, Long entityId, String eventType, String operation) {
+    public void addEvent(Long userId, Long entityId, String eventType, String operation) {
         eventStorage.addEvent(userId, entityId, eventType, operation);
     }
 

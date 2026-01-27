@@ -1,10 +1,12 @@
 package ru.yandex.practicum.filmorate.controller;
 
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.dto.UserDto;
 import ru.yandex.practicum.filmorate.dto.mappers.UserMapper;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.UserService;
 
@@ -28,14 +30,15 @@ public class UserController {
     }
 
     @PostMapping
-    public User createUser(@RequestBody UserDto userDto) {
-        User user = UserMapper.mapToUser(userDto);
+    @ResponseStatus(HttpStatus.CREATED)
+    public User createUser(@Valid @RequestBody UserDto userDto) {
+        User user = userMapper.mapToUser(userDto);
         return userService.createUser(user);
     }
 
     @PutMapping
-    public User updateUser(@RequestBody UserDto userDto) {
-        User user = UserMapper.mapToUser(userDto);
+    public User updateUser(@Valid @RequestBody UserDto userDto) {
+        User user = userMapper.mapToUser(userDto);
         return userService.updateUser(user);
     }
 
@@ -51,14 +54,21 @@ public class UserController {
 
     @GetMapping("/{id}/friends")
     public Collection<User> listFriends(@PathVariable("id") long id) {
-        if (userService.listOfFriends(id) == null) {
-            throw new NotFoundException("Такого юзера нет в списке!");
-        }
         return userService.listOfFriends(id);
     }
 
     @GetMapping("/{id}/friends/common/{otherId}")
     public Collection<User> commonFriends(@PathVariable("id") long id, @PathVariable("otherId") long otherId) {
         return userService.listOfCommonFriends(id, otherId);
+    }
+
+    @DeleteMapping("/{userId}")
+    public void deleteUser(@PathVariable Long userId) {
+        userService.deleteUser(userId);
+    }
+
+    @GetMapping("/{id}/recommendations")
+    public Collection<Film> getRecommendations(@PathVariable("id") long id) {
+        return userService.getRecommendations(id);
     }
 }

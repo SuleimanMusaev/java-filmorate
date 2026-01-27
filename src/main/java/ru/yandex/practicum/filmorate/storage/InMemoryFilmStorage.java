@@ -1,28 +1,16 @@
 package ru.yandex.practicum.filmorate.storage;
 
-import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.model.Director;
 import ru.yandex.practicum.filmorate.model.Film;
 
-import java.time.LocalDate;
 import java.util.*;
 
-@Component("inMemoryFilmStorage")
-@RequiredArgsConstructor
+@Component
 public class InMemoryFilmStorage implements FilmStorage {
-    private static final Logger log = LoggerFactory.getLogger(InMemoryFilmStorage.class);
-    UserStorage userStorage;
-
     private final Map<Long, Film> films = new HashMap<>();
-
-    @Override
-    public Film getFilmById(Long id) {
-        return films.get(id);
-    }
+    private long idCounter = 0;
 
     @Override
     public Collection<Film> getAllFilms() {
@@ -31,61 +19,95 @@ public class InMemoryFilmStorage implements FilmStorage {
 
     @Override
     public Film createFilm(Film film) {
-        if (film.getReleaseDate().isBefore(LocalDate.of(1895, 12, 28))) {
-            throw new ValidationException("Дата релиза — не раньше 28 декабря 1895 года!");
-        }
-        film.setId(getNextId());
-        log.debug("Валидация пройдена.");
+        film.setId(Long.valueOf(++idCounter));
         films.put(film.getId(), film);
-        log.debug("Фильм добавлен в список.");
         return film;
     }
 
     @Override
     public Film updateFilm(Film film) {
-        // validateFilm(film);
-        if (film.getId() == null) {
-            throw new ValidationException("Id должен быть указан!");
-        }
         if (films.containsKey(film.getId())) {
-            if (film.getReleaseDate().isBefore(LocalDate.of(1895, 12, 28))) {
-                throw new ValidationException("Дата релиза — не раньше 28 декабря 1895 года!");
-            }
             films.put(film.getId(), film);
             return film;
-        } else throw new NotFoundException("Такого фильма нет в списке!");
+        } else {
+            throw new NotFoundException("Фильм не найден");
+        }
     }
 
+    @Override
+    public Film getFilmById(Long id) {
+        if (!films.containsKey(id)) {
+            throw new NotFoundException("Фильм не найден");
+        }
+        return films.get(id);
+    }
+
+    @Override
+    public void deleteFilm(Long filmId) {
+        if (!films.containsKey(filmId)) {
+            throw new NotFoundException("Фильм не найден");
+        }
+        films.remove(filmId);
+    }
+
+    @Override
     public Film userLikesFilm(Long id, Long userId) {
         Film film = getFilmById(id);
-        if (userStorage.getUserById(userId) == null) {
-            throw new NotFoundException("Такого юзера нет в списке!");
-        }
-        if (film == null) {
-            throw new NotFoundException("Такого фильма нет в списке!");
-        }
         film.getLikes().add(userId);
         return film;
     }
 
+    @Override
     public Film deleteLikesFilm(Long id, Long userId) {
-        if (userStorage.getUserById(userId) == null) {
-            throw new NotFoundException("Такого юзера нет!");
-        }
         Film film = getFilmById(id);
-        if (film == null) {
-            throw new NotFoundException("Такого фильма нет в списке!");
-        }
         film.getLikes().remove(userId);
         return film;
     }
 
-    private Long getNextId() {
-        long currentMaxId = films.keySet()
-                .stream()
-                .mapToLong(id -> id)
-                .max()
-                .orElse(0);
-        return ++currentMaxId;
+    @Override
+    public Collection<Film> getPopularFilms(Integer count, Long genreId, Integer year) {
+        return new ArrayList<>(films.values());
+    }
+
+    @Override
+    public Collection<Film> getCommonFilms(Long userId, Long friendId) {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public Collection<Film> searchFilms(String query, String by) {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public Collection<Film> getRecommendations(Long userId) {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public List<Film> findFilmsByDirectorId(Long directorId, String sortBy) {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public void saveFilmDirectors(Long filmId, List<Director> directors) {
+    }
+
+    @Override
+    public void deleteFilmDirectors(Long filmId) {
+    }
+
+    @Override
+    public void loadDirectorsForFilms(List<Film> films) {
+    }
+
+    @Override
+    public List<Director> loadDirectors(Film film) {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public Optional<Film> findById(Long id) {
+        return Optional.ofNullable(films.get(id));
     }
 }
